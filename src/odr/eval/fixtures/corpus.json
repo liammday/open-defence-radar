@@ -1,0 +1,82 @@
+[
+  {
+    "source_id": "contracts-finder",
+    "source_ref": "ai-analysis",
+    "title": "AI-assisted intelligence analysis platform",
+    "url": "https://example.gov.uk/notice/ai-analysis",
+    "published_at": "2026-03-14",
+    "text": "AI-assisted intelligence analysis platform\nBuyer: Ministry of Defence\nMachine-learning tooling to triage and summarise open-source intelligence reporting. Awarded to Acme Analytics Ltd."
+  },
+  {
+    "source_id": "contracts-finder",
+    "source_ref": "maritime-autonomy",
+    "title": "Autonomous maritime systems support",
+    "url": "https://example.gov.uk/notice/maritime-autonomy",
+    "published_at": "2026-01-28",
+    "text": "Autonomous maritime systems support\nBuyer: Royal Navy\nIntegration and support for uncrewed surface vessels and autonomous underwater vehicles."
+  },
+  {
+    "source_id": "contracts-finder",
+    "source_ref": "cyber-soc",
+    "title": "Cyber defence security operations centre",
+    "url": "https://example.gov.uk/notice/cyber-soc",
+    "published_at": "2026-02-02",
+    "text": "Cyber defence security operations centre\nBuyer: Ministry of Defence\nManaged detection and response services for defence networks; threat hunting and incident response."
+  },
+  {
+    "source_id": "find-a-tender",
+    "source_ref": "counter-uas",
+    "title": "Counter-UAS detection and mitigation",
+    "url": "https://example.gov.uk/notice/counter-uas",
+    "published_at": "2026-02-19",
+    "text": "Counter-UAS detection and mitigation\nBuyer: Royal Air Force\nDetection, tracking and mitigation of small uncrewed aerial systems (counter-drone) around airfields."
+  },
+  {
+    "source_id": "find-a-tender",
+    "source_ref": "logistics",
+    "title": "Defence logistics and supply chain services",
+    "url": "https://example.gov.uk/notice/logistics",
+    "published_at": "2026-01-10",
+    "text": "Defence logistics and supply chain services\nBuyer: Defence Equipment and Support\nWarehousing, distribution and inventory management for defence materiel."
+  },
+  {
+    "source_id": "find-a-tender",
+    "source_ref": "satcom",
+    "title": "Military satellite communications terminals",
+    "url": "https://example.gov.uk/notice/satcom",
+    "published_at": "2026-03-01",
+    "text": "Military satellite communications terminals\nBuyer: Ministry of Defence\nProcurement of secure satellite communications ground terminals and space-based connectivity."
+  },
+  {
+    "source_id": "govuk-mod",
+    "source_ref": "/government/news/defence-ai-strategy",
+    "title": "Defence AI strategy progress update",
+    "url": "https://www.gov.uk/government/news/defence-ai-strategy",
+    "published_at": "2026-02-09",
+    "text": "Defence AI strategy progress update\nThe Ministry of Defence sets out progress on adopting artificial intelligence, investing in autonomy and data exploitation as policy priorities."
+  },
+  {
+    "source_id": "govuk-mod",
+    "source_ref": "/government/news/veterans-support",
+    "title": "New support for armed forces veterans",
+    "url": "https://www.gov.uk/government/news/veterans-support",
+    "published_at": "2026-01-20",
+    "text": "New support for armed forces veterans\nExpanded healthcare and employment support for veterans, including a digital veteran card."
+  },
+  {
+    "source_id": "govuk-mod",
+    "source_ref": "/government/news/nato-exercise",
+    "title": "Joint training exercise with NATO allies",
+    "url": "https://www.gov.uk/government/news/nato-exercise",
+    "published_at": "2026-03-05",
+    "text": "Joint training exercise with NATO allies\nUK armed forces join a multinational NATO training exercise focused on interoperability and collective defence."
+  },
+  {
+    "source_id": "govuk-mod",
+    "source_ref": "/government/news/frigate-programme",
+    "title": "New frigate shipbuilding programme milestone",
+    "url": "https://www.gov.uk/government/news/frigate-programme",
+    "published_at": "2026-02-25",
+    "text": "New frigate shipbuilding programme milestone\nA milestone in the Royal Navy frigate shipbuilding programme, supporting jobs in UK shipyards."
+  }
+]
