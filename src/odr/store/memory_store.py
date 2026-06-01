@@ -6,6 +6,8 @@ runs against both and proves they are interchangeable behind the protocol.
 
 from __future__ import annotations
 
+import re
+
 from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
 
 
@@ -100,4 +102,27 @@ class InMemoryStore:
     def keyword_search(
         self, query: str, k: int, filters: Filters | None = None
     ) -> list[ScoredChunk]:
-        raise NotImplementedError("keyword_search lands in #19 (FTS5)")
+        tokens = set(re.findall(r"\w+", query.lower()))
+        if not tokens:
+            return []
+        scored: list[tuple[int, str, str, str, Document | None]] = []
+        for document_id, chunks in self._chunks.items():
+            doc = self._documents.get(document_id)
+            for c in chunks:
+                overlap = len(tokens & set(re.findall(r"\w+", c.text.lower())))
+                if overlap:
+                    scored.append((overlap, f"{document_id}#{c.ordinal}", document_id, c.text, doc))
+        scored.sort(key=lambda r: r[0], reverse=True)
+        return [
+            ScoredChunk(
+                chunk_id=chunk_id,
+                document_id=document_id,
+                title=doc.title if doc else "",
+                text=text,
+                score=float(overlap),
+                source_name=doc.source_id if doc else "",
+                url=doc.url if doc else "",
+                published_at=doc.published_at if doc else None,
+            )
+            for overlap, chunk_id, document_id, text, doc in scored[:k]
+        ]

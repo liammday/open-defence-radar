@@ -111,6 +111,31 @@ def test_upsert_and_get_source_records_provenance(store) -> None:  # type: ignor
     assert store.get_source("missing") is None
 
 
+def _seed_two_chunks(store) -> tuple[str, str]:  # type: ignore[no-untyped-def]
+    a = store.upsert_document(
+        _doc(ref="r1", text="artificial intelligence platform", content_hash="h1")
+    )
+    store.upsert_chunks(a, [Chunk(a, 0, "artificial intelligence platform", 3)])
+    b = store.upsert_document(
+        _doc(ref="r2", text="passenger transport services", content_hash="h2")
+    )
+    store.upsert_chunks(b, [Chunk(b, 0, "passenger transport services", 3)])
+    return f"{a}#0", f"{b}#0"
+
+
+def test_keyword_search_matches_only_relevant_chunks(store) -> None:  # type: ignore[no-untyped-def]
+    ai_chunk, _ = _seed_two_chunks(store)
+    hits = store.keyword_search("intelligence", k=5)
+    assert [h.chunk_id for h in hits] == [ai_chunk]
+    assert hits[0].text == "artificial intelligence platform"
+
+
+def test_keyword_search_no_match_returns_empty(store) -> None:  # type: ignore[no-untyped-def]
+    _seed_two_chunks(store)
+    assert store.keyword_search("zzzznotpresent", k=5) == []
+    assert store.keyword_search("   ", k=5) == []
+
+
 def test_sqlite_creates_tables_and_enables_wal(tmp_path) -> None:  # type: ignore[no-untyped-def]
     path = tmp_path / "odr.sqlite3"
     SqliteStore(path).init_schema()
