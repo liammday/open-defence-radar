@@ -13,9 +13,10 @@ tool (plus a CLI, and a web console in a later phase).
 
 ## Status
 
-**Phase 1 (`v0.2.0`) — hybrid retrieval + multi-source.** Three open sources
-ingested, embedded, and queryable as grounded, cited answers (CLI + MCP tool),
-with hybrid (semantic + keyword) retrieval and date/source filters. See the
+**Phase 2 (`v0.3.0`) — evaluation harness.** Three open sources, hybrid retrieval,
+and filters (Phase 1), now with an **evaluation harness** that scores retrieval
+hit-rate, groundedness (entailment), and unsupported-claim rate against a fixed
+question set — wired into CI as a release gate (`odr eval`). See the
 [milestones](https://github.com/liammday/open-defence-radar/milestones) and
 [releases](https://github.com/liammday/open-defence-radar/releases).
 
@@ -112,8 +113,23 @@ uv run mypy src tests                                  # types
 uv run pytest -q                                       # tests (offline)
 ```
 
-CI runs these four gates on every PR (GitHub Actions). The eval-threshold gate
-and "require status checks" branch protection land in Phase 2 / on public release.
+CI runs these gates on every PR (GitHub Actions). "Require status checks" branch
+protection turns on at public release.
+
+## Evaluation
+
+The differentiator: quality is measured, not asserted.
+
+```bash
+uv run odr eval        # scores the fixture question set; writes data/eval/latest.json
+```
+
+`odr eval` runs a fixed question set against a committed fixture corpus and reports
+**retrieval hit-rate / recall@k / MRR** and **groundedness** (an LLM judge checks
+each cited claim is entailed by its passage) plus the **unsupported-claim rate**.
+Floors live in `src/odr/eval/fixtures/thresholds.json` and are enforced in CI
+(`tests/eval/test_thresholds.py`) — a metric
+breaching its floor fails the build, so retrieval/grounding can't silently regress.
 
 ## Docs
 
