@@ -183,6 +183,15 @@ class SqliteStore:
         )
         return len(rows) > 0
 
+    def document_exists(self, source_id: str, source_ref: str) -> bool:
+        rows = list(
+            self._conn.execute(
+                "SELECT 1 FROM document WHERE source_id = ? AND source_ref = ? LIMIT 1",
+                (source_id, source_ref),
+            )
+        )
+        return len(rows) > 0
+
     def document_count(self) -> int:
         return int(next(self._conn.execute("SELECT COUNT(*) FROM document"))[0])
 

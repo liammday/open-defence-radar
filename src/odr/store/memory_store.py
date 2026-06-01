@@ -34,6 +34,9 @@ class InMemoryStore:
     def content_hash_exists(self, content_hash: str) -> bool:
         return any(d.content_hash == content_hash for d in self._documents.values())
 
+    def document_exists(self, source_id: str, source_ref: str) -> bool:
+        return f"{source_id}:{source_ref}" in self._documents
+
     def document_count(self) -> int:
         return len(self._documents)
 
