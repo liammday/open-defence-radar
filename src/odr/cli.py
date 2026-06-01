@@ -15,11 +15,9 @@ from odr import __version__
 from odr.embed.factory import get_embedder
 from odr.ingest.chunk import WholeRecordChunker
 from odr.ingest.pipeline import run_ingest
-from odr.retrieve.retriever import Retriever
+from odr.query import answer_query, build_filters
 from odr.sources.contracts_finder import ContractsFinder
 from odr.store.sqlite_store import SqliteStore
-from odr.synthesise.factory import get_generator
-from odr.synthesise.synthesiser import Synthesiser
 
 app = typer.Typer(
     help="open-defence-radar — grounded RAG over open defence-and-security signals.",
@@ -72,13 +70,12 @@ def ingest(
 def query(
     topic: str = typer.Argument(..., help="What to ask"),
     k: int = typer.Option(8, help="Number of passages to retrieve"),
+    date_from: str | None = typer.Option(None, "--date-from", help="Only on/after YYYY-MM-DD"),
+    date_to: str | None = typer.Option(None, "--date-to", help="Only on/before YYYY-MM-DD"),
+    source: list[str] | None = typer.Option(None, "--source", help="Restrict to source id(s)"),
 ) -> None:
     """Ask a grounded, cited question over the ingested corpus."""
-    embedder = get_embedder()
-    store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"), dim=embedder.dim)
-    store.init_schema()
-    passages = Retriever(store, embedder).retrieve(topic, k=k)
-    answer = Synthesiser(get_generator()).answer(topic, passages)
+    answer = answer_query(topic, k=k, filters=build_filters(date_from, date_to, source))
 
     typer.echo(answer.text)
     if answer.citations:

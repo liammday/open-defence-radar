@@ -43,6 +43,10 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "C4", "PIE"]
 
+[tool.ruff.lint.flake8-bugbear]
+# Typer's dependency-injection idiom: calls in argument defaults are intentional.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "src"

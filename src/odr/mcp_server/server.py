@@ -9,16 +9,11 @@ Set ODR_DB_PATH to your ingested store and ANTHROPIC_API_KEY for synthesis.
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from odr.embed.factory import get_embedder
-from odr.retrieve.retriever import Retriever
-from odr.store.sqlite_store import SqliteStore
-from odr.synthesise.factory import get_generator
-from odr.synthesise.synthesiser import Synthesiser
+from odr.query import answer_query, build_filters
 from odr.types import Answer
 
 mcp = FastMCP("open-defence-radar")
@@ -48,16 +43,14 @@ def _answer_to_dict(answer: Answer) -> dict[str, Any]:
     }
 
 
-def _run_query(topic: str, k: int) -> Answer:
-    embedder = get_embedder()
-    store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"), dim=embedder.dim)
-    store.init_schema()
-    passages = Retriever(store, embedder).retrieve(topic, k=k)
-    return Synthesiser(get_generator()).answer(topic, passages)
-
-
 @mcp.tool()
-def query(topic: str, k: int = 8) -> dict[str, Any]:
+def query(
+    topic: str,
+    k: int = 8,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    sources: list[str] | None = None,
+) -> dict[str, Any]:
     """Answer a question grounded ONLY in ingested open-source defence-and-security signals.
 
     Returns a cited answer (every claim carries a [n] marker), the resolved
@@ -68,8 +61,11 @@ def query(topic: str, k: int = 8) -> dict[str, Any]:
     Args:
         topic: The question or topic to research.
         k: How many passages to retrieve (default 8).
+        date_from: Only consider records published on/after this YYYY-MM-DD.
+        date_to: Only consider records published on/before this YYYY-MM-DD.
+        sources: Restrict to these source ids (e.g. ["contracts-finder"]).
     """
-    return _answer_to_dict(_run_query(topic, k))
+    return _answer_to_dict(answer_query(topic, k, build_filters(date_from, date_to, sources)))
 
 
 def main() -> None:
