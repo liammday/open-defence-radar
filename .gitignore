@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+
+# Local data stores (keep tracked sample fixtures only)
+/data/*
+!/data/fixtures/
+/data/fixtures/*
+!/data/fixtures/.gitkeep
+
+# OS / editor
+.DS_Store
