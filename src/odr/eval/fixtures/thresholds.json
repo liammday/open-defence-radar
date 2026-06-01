@@ -1,0 +1,8 @@
+{
+  "_note": "Floors (and the unsupported-claim ceiling) the eval must clear. Ratchet UP over time; lowering one is a deliberate, reviewed PR. Retrieval floors gate offline in CI; groundedness gates when an ANTHROPIC_API_KEY is present.",
+  "hit_rate": 0.8,
+  "recall_at_k": 0.8,
+  "mrr": 0.7,
+  "groundedness": 0.9,
+  "unsupported_claim_rate": 0.1
+}
