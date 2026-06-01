@@ -1,0 +1,45 @@
+[
+  {
+    "question": "Which notices involve artificial intelligence or machine learning?",
+    "relevant_doc_ids": ["contracts-finder:ai-analysis", "govuk-mod:/government/news/defence-ai-strategy"],
+    "must_mention": ["intelligence"]
+  },
+  {
+    "question": "What autonomous or uncrewed systems are mentioned?",
+    "relevant_doc_ids": ["contracts-finder:maritime-autonomy", "find-a-tender:counter-uas"]
+  },
+  {
+    "question": "Is there any counter-drone or counter-UAS work?",
+    "relevant_doc_ids": ["find-a-tender:counter-uas"]
+  },
+  {
+    "question": "What cyber defence services are being procured?",
+    "relevant_doc_ids": ["contracts-finder:cyber-soc"]
+  },
+  {
+    "question": "Any satellite or space communications procurement?",
+    "relevant_doc_ids": ["find-a-tender:satcom"]
+  },
+  {
+    "question": "What support is there for armed forces veterans?",
+    "relevant_doc_ids": ["govuk-mod:/government/news/veterans-support"]
+  },
+  {
+    "question": "Are there joint training exercises with NATO allies?",
+    "relevant_doc_ids": ["govuk-mod:/government/news/nato-exercise"]
+  },
+  {
+    "question": "What shipbuilding or naval vessel programmes are mentioned?",
+    "relevant_doc_ids": ["govuk-mod:/government/news/frigate-programme"]
+  },
+  {
+    "question": "What logistics or supply chain contracts exist?",
+    "relevant_doc_ids": ["find-a-tender:logistics"],
+    "filters": {"sources": ["find-a-tender", "contracts-finder"]}
+  },
+  {
+    "question": "What is the Ministry of Defence doing on its AI strategy?",
+    "relevant_doc_ids": ["govuk-mod:/government/news/defence-ai-strategy"],
+    "must_mention": ["autonomy"]
+  }
+]
