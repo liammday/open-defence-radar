@@ -136,6 +136,16 @@ def test_keyword_search_no_match_returns_empty(store) -> None:  # type: ignore[n
     assert store.keyword_search("   ", k=5) == []
 
 
+def test_latest_published_is_max_date_per_source(store) -> None:  # type: ignore[no-untyped-def]
+    assert store.latest_published("contracts-finder") is None
+    store.upsert_document(Document("contracts-finder", "r1", "t", "u", "x", "h1", date(2025, 1, 1)))
+    store.upsert_document(Document("contracts-finder", "r2", "t", "u", "y", "h2", date(2026, 3, 1)))
+    store.upsert_document(Document("find-a-tender", "r3", "t", "u", "z", "h3", date(2027, 1, 1)))
+    assert store.latest_published("contracts-finder") == date(2026, 3, 1)
+    assert store.latest_published("find-a-tender") == date(2027, 1, 1)
+    assert store.latest_published("missing") is None
+
+
 def _seed_two_sources_text(store) -> tuple[str, str]:  # type: ignore[no-untyped-def]
     """Same text 'alpha signal' from two sources / dates, one chunk each (no vectors)."""
     a = store.upsert_document(

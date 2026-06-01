@@ -15,7 +15,7 @@ SAMPLE = {
     "link": "/government/news/defence-ai-strategy-progress",
     "public_timestamp": "2026-02-09T11:00:00Z",
     "description": "An update on defence AI adoption.",
-    "indexable_content": "The Ministry of Defence continues to invest in autonomy and data exploitation.",
+    "indexable_content": "The MoD invests in autonomy and data exploitation.",
 }
 
 

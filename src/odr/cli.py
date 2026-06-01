@@ -7,6 +7,7 @@ respective Phase 0/1 issues; this scaffold establishes the entry point.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from datetime import date
 
 import typer
@@ -15,6 +16,7 @@ from odr import __version__
 from odr.embed.factory import get_embedder
 from odr.ingest.pipeline import run_ingest
 from odr.query import answer_query, build_filters
+from odr.sources.base import Source
 from odr.sources.contracts_finder import ContractsFinder
 from odr.sources.find_a_tender import FindATender
 from odr.sources.govuk_news import GovUkNews
@@ -26,7 +28,7 @@ app = typer.Typer(
 )
 
 # Source registry — one entry per source adapter.
-_SOURCES = {
+_SOURCES: dict[str, Callable[[], Source]] = {
     "contracts-finder": ContractsFinder,
     "find-a-tender": FindATender,
     "govuk-mod": GovUkNews,
@@ -53,16 +55,22 @@ def ingest(
     source: str = typer.Argument(..., help="Source id, e.g. 'contracts-finder'"),
     limit: int | None = typer.Option(None, help="Max records to ingest"),
     since: str | None = typer.Option(None, help="Only records published on/after YYYY-MM-DD"),
+    incremental: bool = typer.Option(
+        False, "--incremental", help="Resume from the newest stored date for this source"
+    ),
 ) -> None:
     """Ingest an open source into the local store."""
     if source not in _SOURCES:
         known = ", ".join(sorted(_SOURCES))
         raise typer.BadParameter(f"unknown source {source!r} (known: {known})")
+    src = _SOURCES[source]()
     embedder = get_embedder()
     store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"), dim=embedder.dim)
     store.init_schema()
     since_date = date.fromisoformat(since) if since else None
-    run = run_ingest(_SOURCES[source](), store, embedder, since=since_date, limit=limit)
+    if incremental and since_date is None:
+        since_date = store.latest_published(src.meta.id)
+    run = run_ingest(src, store, embedder, since=since_date, limit=limit)
     typer.echo(
         f"{run.source_id}: {run.docs_seen} seen, {run.docs_new} new, "
         f"{run.docs_updated} updated — {run.status}"

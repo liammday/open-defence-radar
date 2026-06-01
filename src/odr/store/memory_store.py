@@ -7,6 +7,7 @@ runs against both and proves they are interchangeable behind the protocol.
 from __future__ import annotations
 
 import re
+from datetime import date
 
 from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
 
@@ -58,6 +59,14 @@ class InMemoryStore:
 
     def document_count(self) -> int:
         return len(self._documents)
+
+    def latest_published(self, source_id: str) -> date | None:
+        dates = [
+            d.published_at
+            for d in self._documents.values()
+            if d.source_id == source_id and d.published_at is not None
+        ]
+        return max(dates) if dates else None
 
     def upsert_chunks(
         self,
