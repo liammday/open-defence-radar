@@ -103,3 +103,16 @@ class IngestRun:
     docs_new: int
     docs_updated: int
     error: str | None = None
+
+
+@dataclass(frozen=True)
+class SourceMeta:
+    """Provenance metadata for an open source (the `source` table row)."""
+
+    id: str
+    name: str
+    url: str
+    access_method: str
+    licence: str
+    attribution: str | None = None
+    enabled: bool = True

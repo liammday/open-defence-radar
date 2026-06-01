@@ -15,7 +15,7 @@ import pytest
 from odr.store.base import Store
 from odr.store.memory_store import InMemoryStore
 from odr.store.sqlite_store import SqliteStore
-from odr.types import Chunk, Document, IngestRun
+from odr.types import Chunk, Document, IngestRun, SourceMeta
 
 
 def _requires_store(_s: Store) -> None:
@@ -90,6 +90,25 @@ def test_record_ingest_run(store) -> None:  # type: ignore[no-untyped-def]
         )
     )
     assert store.ingest_run_count() == 1
+
+
+def test_upsert_and_get_source_records_provenance(store) -> None:  # type: ignore[no-untyped-def]
+    meta = SourceMeta(
+        id="contracts-finder",
+        name="UK Contracts Finder",
+        url="https://www.contractsfinder.service.gov.uk",
+        access_method="OCDS API",
+        licence="OGL v3.0",
+        attribution=(
+            "Contains public sector information licensed under the Open Government Licence v3.0."
+        ),
+    )
+    store.upsert_source(meta)
+    got = store.get_source("contracts-finder")
+    assert got is not None
+    assert got.licence == "OGL v3.0"
+    assert got.access_method == "OCDS API"
+    assert store.get_source("missing") is None
 
 
 def test_sqlite_creates_tables_and_enables_wal(tmp_path) -> None:  # type: ignore[no-untyped-def]

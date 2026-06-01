@@ -9,13 +9,19 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk
+from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
 
 
 class Store(Protocol):
     def init_schema(self) -> None:
         """Create tables/indexes if absent. Idempotent."""
         ...
+
+    def upsert_source(self, meta: SourceMeta) -> None:
+        """Record an open source's provenance (licence, access method)."""
+        ...
+
+    def get_source(self, source_id: str) -> SourceMeta | None: ...
 
     def upsert_document(self, doc: Document) -> str:
         """Insert or update a document by (source_id, source_ref); return its id."""
