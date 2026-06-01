@@ -13,6 +13,7 @@ Keyword search (FTS5) lands in #19; retrieval filters in #21.
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -104,6 +105,9 @@ class SqliteStore:
         self._conn.execute(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS chunk_vec "
             f"USING vec0(chunk_id TEXT PRIMARY KEY, embedding float[{self.dim}])"
+        )
+        self._conn.execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(chunk_id UNINDEXED, text)"
         )
 
     def upsert_source(self, meta: SourceMeta) -> None:
@@ -213,6 +217,7 @@ class SqliteStore:
             ]
             for cid in old_ids:
                 self._conn.execute("DELETE FROM chunk_vec WHERE chunk_id = ?", (cid,))
+                self._conn.execute("DELETE FROM chunk_fts WHERE chunk_id = ?", (cid,))
             self._conn.execute("DELETE FROM chunk WHERE document_id = ?", (document_id,))
             self._conn.executemany(
                 """
@@ -230,6 +235,10 @@ class SqliteStore:
                     )
                     for c in chunks
                 ],
+            )
+            self._conn.executemany(
+                "INSERT INTO chunk_fts (chunk_id, text) VALUES (?, ?)",
+                [(f"{document_id}#{c.ordinal}", c.text) for c in chunks],
             )
             if vectors is not None:
                 self._conn.executemany(
@@ -318,5 +327,42 @@ class SqliteStore:
     def keyword_search(
         self, query: str, k: int, filters: Filters | None = None
     ) -> list[ScoredChunk]:
-        # TODO(odr): implement via FTS5 in #19.
-        raise NotImplementedError("keyword_search lands in #19 (FTS5)")
+        # TODO(odr): apply date/source `filters` in #21.
+        tokens = re.findall(r"\w+", query.lower())
+        if not tokens:
+            return []
+        match = " OR ".join(tokens)  # recall-oriented; ranks feed RRF fusion in #20
+        rows = self._conn.execute(
+            """
+            WITH kw AS (
+                SELECT chunk_id, bm25(chunk_fts) AS rank
+                FROM chunk_fts
+                WHERE chunk_fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+            )
+            SELECT kw.chunk_id, kw.rank, c.document_id, COALESCE(d.title, ''), c.text,
+                   COALESCE(s.name, d.source_id), COALESCE(d.url, ''), d.published_at
+            FROM kw
+            JOIN chunk c ON c.id = kw.chunk_id
+            JOIN document d ON d.id = c.document_id
+            LEFT JOIN source s ON s.id = d.source_id
+            ORDER BY kw.rank
+            """,
+            (match, k),
+        )
+        results: list[ScoredChunk] = []
+        for chunk_id, rank, document_id, title, text, source_name, url, published in rows:
+            results.append(
+                ScoredChunk(
+                    chunk_id=chunk_id,
+                    document_id=document_id,
+                    title=title,
+                    text=text,
+                    score=-float(rank),  # bm25: more-negative is better -> flip to higher-is-better
+                    source_name=source_name,
+                    url=url,
+                    published_at=date.fromisoformat(published) if published else None,
+                )
+            )
+        return results
