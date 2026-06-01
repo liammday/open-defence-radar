@@ -17,6 +17,7 @@ from odr.ingest.chunk import WholeRecordChunker
 from odr.ingest.pipeline import run_ingest
 from odr.query import answer_query, build_filters
 from odr.sources.contracts_finder import ContractsFinder
+from odr.sources.find_a_tender import FindATender
 from odr.store.sqlite_store import SqliteStore
 
 app = typer.Typer(
@@ -25,7 +26,7 @@ app = typer.Typer(
 )
 
 # Source registry — one entry per source adapter.
-_SOURCES = {"contracts-finder": ContractsFinder}
+_SOURCES = {"contracts-finder": ContractsFinder, "find-a-tender": FindATender}
 
 
 @app.callback()
