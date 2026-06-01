@@ -31,6 +31,10 @@ class Store(Protocol):
         """True if any stored document has this content hash (exact dedupe)."""
         ...
 
+    def document_exists(self, source_id: str, source_ref: str) -> bool:
+        """True if a document with this (source_id, source_ref) is stored."""
+        ...
+
     def document_count(self) -> int: ...
 
     def upsert_chunks(

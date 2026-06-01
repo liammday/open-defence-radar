@@ -18,3 +18,9 @@ def test_cli_version_command() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert result.stdout.strip() == __version__
+
+
+def test_cli_ingest_rejects_unknown_source() -> None:
+    # Errors before any network/model work, so this stays offline.
+    result = runner.invoke(app, ["ingest", "no-such-source"])
+    assert result.exit_code != 0
