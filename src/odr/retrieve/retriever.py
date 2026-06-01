@@ -1,12 +1,14 @@
-"""Semantic retriever — the clean seam the synthesiser and MCP tool call.
+"""Hybrid retriever — the clean seam the synthesiser and MCP tool call.
 
-Phase 0: embed the query and return the store's nearest passages. Hybrid
-(keyword + RRF fusion) and filters arrive in Phase 1 (#19-#21).
+Fuses semantic (vector) and keyword (BM25) rankings via Reciprocal Rank Fusion.
+Each backend is over-fetched to a pool, then fused down to the top k. Date/source
+filters arrive in #21; an eval-gated reranker in #25.
 """
 
 from __future__ import annotations
 
 from odr.embed.base import Embedder
+from odr.retrieve.fusion import reciprocal_rank_fusion
 from odr.store.base import Store
 from odr.types import Filters, ScoredChunk
 
@@ -17,5 +19,7 @@ class Retriever:
         self._embedder = embedder
 
     def retrieve(self, query: str, k: int = 8, filters: Filters | None = None) -> list[ScoredChunk]:
-        query_vec = self._embedder.embed([query])[0]
-        return self._store.semantic_search(query_vec, k, filters)
+        pool = max(k, 20)
+        semantic = self._store.semantic_search(self._embedder.embed([query])[0], pool, filters)
+        keyword = self._store.keyword_search(query, pool, filters)
+        return reciprocal_rank_fusion([semantic, keyword], k)
