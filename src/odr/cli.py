@@ -13,11 +13,11 @@ import typer
 
 from odr import __version__
 from odr.embed.factory import get_embedder
-from odr.ingest.chunk import WholeRecordChunker
 from odr.ingest.pipeline import run_ingest
 from odr.query import answer_query, build_filters
 from odr.sources.contracts_finder import ContractsFinder
 from odr.sources.find_a_tender import FindATender
+from odr.sources.govuk_news import GovUkNews
 from odr.store.sqlite_store import SqliteStore
 
 app = typer.Typer(
@@ -26,7 +26,11 @@ app = typer.Typer(
 )
 
 # Source registry — one entry per source adapter.
-_SOURCES = {"contracts-finder": ContractsFinder, "find-a-tender": FindATender}
+_SOURCES = {
+    "contracts-finder": ContractsFinder,
+    "find-a-tender": FindATender,
+    "govuk-mod": GovUkNews,
+}
 
 
 @app.callback()
@@ -58,9 +62,7 @@ def ingest(
     store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"), dim=embedder.dim)
     store.init_schema()
     since_date = date.fromisoformat(since) if since else None
-    run = run_ingest(
-        _SOURCES[source](), store, embedder, WholeRecordChunker(), since=since_date, limit=limit
-    )
+    run = run_ingest(_SOURCES[source](), store, embedder, since=since_date, limit=limit)
     typer.echo(
         f"{run.source_id}: {run.docs_seen} seen, {run.docs_new} new, "
         f"{run.docs_updated} updated — {run.status}"

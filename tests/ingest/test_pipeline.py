@@ -32,6 +32,10 @@ class FakeSource:
             id="fake-src", name="Fake", url="u", access_method="test", licence="OGL v3.0"
         )
 
+    @property
+    def chunker(self) -> WholeRecordChunker:
+        return WholeRecordChunker()
+
     def fetch(
         self, since: date | None = None, limit: int | None = None
     ) -> Iterator[Mapping[str, Any]]:
@@ -73,7 +77,7 @@ def test_ingest_new_documents(pstore) -> None:  # type: ignore[no-untyped-def]
     src = FakeSource(
         [{"ref": "a", "text": "alpha ai contract"}, {"ref": "b", "text": "beta autonomy"}]
     )
-    run = run_ingest(src, pstore, emb, WholeRecordChunker())
+    run = run_ingest(src, pstore, emb)
     assert run.docs_seen == 2
     assert run.docs_new == 2
     assert run.docs_updated == 0
@@ -86,10 +90,8 @@ def test_ingest_new_documents(pstore) -> None:  # type: ignore[no-untyped-def]
 
 def test_ingest_is_idempotent(pstore) -> None:  # type: ignore[no-untyped-def]
     emb = FakeEmbedder(dim=8)
-    run_ingest(FakeSource([{"ref": "a", "text": "alpha"}]), pstore, emb, WholeRecordChunker())
-    again = run_ingest(
-        FakeSource([{"ref": "a", "text": "alpha"}]), pstore, emb, WholeRecordChunker()
-    )
+    run_ingest(FakeSource([{"ref": "a", "text": "alpha"}]), pstore, emb)
+    again = run_ingest(FakeSource([{"ref": "a", "text": "alpha"}]), pstore, emb)
     assert again.docs_seen == 1
     assert again.docs_new == 0
     assert again.docs_updated == 0
@@ -98,8 +100,8 @@ def test_ingest_is_idempotent(pstore) -> None:  # type: ignore[no-untyped-def]
 
 def test_ingest_updates_changed_content(pstore) -> None:  # type: ignore[no-untyped-def]
     emb = FakeEmbedder(dim=8)
-    run_ingest(FakeSource([{"ref": "a", "text": "old"}]), pstore, emb, WholeRecordChunker())
-    again = run_ingest(FakeSource([{"ref": "a", "text": "new"}]), pstore, emb, WholeRecordChunker())
+    run_ingest(FakeSource([{"ref": "a", "text": "old"}]), pstore, emb)
+    again = run_ingest(FakeSource([{"ref": "a", "text": "new"}]), pstore, emb)
     assert again.docs_updated == 1
     assert again.docs_new == 0
     assert pstore.document_count() == 1
@@ -110,7 +112,7 @@ def test_ingest_per_record_error_is_not_fatal(pstore) -> None:  # type: ignore[n
     src = FakeSource(
         [{"ref": "a", "text": "ok"}, {"ref": "b", "fail": True}, {"ref": "c", "text": "fine"}]
     )
-    run = run_ingest(src, pstore, emb, WholeRecordChunker())
+    run = run_ingest(src, pstore, emb)
     assert run.docs_seen == 3
     assert run.docs_new == 2
     assert run.status == "partial"
@@ -121,11 +123,11 @@ def test_ingest_per_record_error_is_not_fatal(pstore) -> None:  # type: ignore[n
 def test_ingest_respects_limit(pstore) -> None:  # type: ignore[no-untyped-def]
     emb = FakeEmbedder(dim=8)
     src = FakeSource([{"ref": str(i), "text": f"text {i}"} for i in range(5)])
-    run = run_ingest(src, pstore, emb, WholeRecordChunker(), limit=2)
+    run = run_ingest(src, pstore, emb, limit=2)
     assert run.docs_seen == 2
 
 
 def test_ingest_records_a_run(pstore) -> None:  # type: ignore[no-untyped-def]
     emb = FakeEmbedder(dim=8)
-    run_ingest(FakeSource([{"ref": "a", "text": "x"}]), pstore, emb, WholeRecordChunker())
+    run_ingest(FakeSource([{"ref": "a", "text": "x"}]), pstore, emb)
     assert pstore.ingest_run_count() == 1

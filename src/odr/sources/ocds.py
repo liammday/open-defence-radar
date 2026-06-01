@@ -15,6 +15,7 @@ from typing import Any
 
 import httpx
 
+from odr.ingest.chunk import Chunker, WholeRecordChunker
 from odr.types import Document, SourceMeta
 
 
@@ -42,6 +43,10 @@ class OcdsSource:
     @property
     def meta(self) -> SourceMeta:
         return self._meta
+
+    @property
+    def chunker(self) -> Chunker:
+        return WholeRecordChunker()  # short structured records → one chunk
 
     def fetch(
         self, since: date | None = None, limit: int | None = None
