@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from datetime import date
 
 from odr.embed.factory import get_embedder
+from odr.retrieve.rerank import get_reranker
 from odr.retrieve.retriever import Retriever
 from odr.store.sqlite_store import SqliteStore
 from odr.synthesise.factory import get_generator
@@ -38,5 +39,6 @@ def answer_query(topic: str, k: int = 8, filters: Filters | None = None) -> Answ
     embedder = get_embedder()
     store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"), dim=embedder.dim)
     store.init_schema()
-    passages = Retriever(store, embedder).retrieve(topic, k=k, filters=filters)
+    retriever = Retriever(store, embedder, reranker=get_reranker())
+    passages = retriever.retrieve(topic, k=k, filters=filters)
     return Synthesiser(get_generator()).answer(topic, passages)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from odr.embed.fake import FakeEmbedder
 from odr.retrieve.retriever import Retriever
 from odr.store.memory_store import InMemoryStore
-from odr.types import Chunk, Document
+from odr.types import Chunk, Document, ScoredChunk
 
 
 def _seed(store: InMemoryStore, embedder: FakeEmbedder) -> None:
@@ -37,3 +37,21 @@ def test_retrieve_k_limits_results() -> None:
     store.init_schema()
     _seed(store, embedder)
     assert len(Retriever(store, embedder).retrieve("anything", k=1)) == 1
+
+
+class _ReverseReranker:
+    model_id = "reverse"
+
+    def rerank(self, query: str, chunks: list[ScoredChunk]) -> list[ScoredChunk]:
+        return list(reversed(chunks))
+
+
+def test_retriever_applies_reranker_when_present() -> None:
+    store, embedder = InMemoryStore(), FakeEmbedder(dim=8)
+    store.init_schema()
+    _seed(store, embedder)
+    base = Retriever(store, embedder).retrieve("alpha contract about ai", k=2)
+    reranked = Retriever(store, embedder, reranker=_ReverseReranker()).retrieve(
+        "alpha contract about ai", k=2
+    )
+    assert [c.chunk_id for c in reranked] == [c.chunk_id for c in reversed(base)]
