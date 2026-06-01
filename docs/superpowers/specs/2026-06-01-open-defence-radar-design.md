@@ -90,9 +90,10 @@ inspectable file, no server.
   but forces a DB server into run-from-clone; heavier than Phase 0 warrants.
 - The `Store` interface is identical regardless of backend, so **Postgres +
   pgvector + Postgres FTS is a later milestone, not a rewrite.**
-- **Known risk (verify in the first ingest issue):** some Python `sqlite3`
-  builds disable extension loading. Phase 0 must confirm `sqlite-vec` loads;
-  fallback is `pysqlite3-binary` or `apsw`.
+- **Known risk — RESOLVED (#10):** stdlib `sqlite3` on the python.org macOS
+  build lacks `enable_load_extension`, and `pysqlite3-binary` ships no arm64
+  wheel. The store therefore uses **`apsw`** (bundles a modern SQLite with
+  extension loading; cross-platform wheels) to load `sqlite-vec`.
 
 ### 5.3 Fork 2 — Provider interfaces: two thin protocols, env-selected
 
@@ -235,7 +236,8 @@ unchanged.
 
 ## 10. Open risks / to verify
 
-- `sqlite-vec` extension loading on the target Python (§5.2).
+- ~~`sqlite-vec` extension loading on the target Python (§5.2).~~ Resolved in
+  #10 — store uses `apsw`.
 - Each source's licence/attribution + access method — verified per-source during
   its ingest issue; record and skip rather than guess (brief §9).
 - Local embedding model size/latency on first run (model download) — document in

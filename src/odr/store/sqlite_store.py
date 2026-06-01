@@ -1,19 +1,29 @@
-"""SQLite implementation of the Store contract (relational parts).
+"""SQLite implementation of the Store contract, using apsw + sqlite-vec.
 
-For v0 the whole knowledge base is one SQLite file. Vector search (#10, via the
-sqlite-vec extension) and keyword search (#19, via FTS5) live in the same file
-and are added to this class in those issues.
+We use **apsw** rather than the stdlib ``sqlite3`` because loading SQLite
+extensions — required for sqlite-vec's vector index — needs a SQLite build with
+loadable extensions enabled, which the stdlib ``sqlite3`` on several platforms
+(including the python.org macOS builds) does NOT provide. apsw bundles a modern
+SQLite with extension loading and ships cross-platform wheels. The whole
+knowledge base is still one SQLite file.
+
+Keyword search (FTS5) lands in #19; retrieval filters in #21.
 """
 
 from __future__ import annotations
 
 import json
-import sqlite3
+from datetime import date
 from pathlib import Path
+
+import apsw
+import sqlite_vec
 
 from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk
 
-_SCHEMA = """
+DEFAULT_DIM = 384  # BGE-small-en-v1.5; the local-embedder default arrives in #12.
+
+_RELATIONAL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS source (
     id            TEXT PRIMARY KEY,
     name          TEXT NOT NULL,
@@ -65,52 +75,73 @@ CREATE TABLE IF NOT EXISTS ingest_run (
 """
 
 
+def _open_connection(path: str) -> apsw.Connection:
+    """Open a connection with the sqlite-vec extension loaded and WAL enabled."""
+    con = apsw.Connection(path)
+    try:
+        con.enableloadextension(True)
+        con.loadextension(sqlite_vec.loadable_path())
+    except apsw.Error as exc:  # pragma: no cover - defensive
+        raise RuntimeError(
+            "Could not load the sqlite-vec extension. The pinned apsw build should "
+            "support loadable extensions; check the install."
+        ) from exc
+    finally:
+        con.enableloadextension(False)
+    con.execute("PRAGMA foreign_keys = ON")
+    con.execute("PRAGMA journal_mode = WAL")
+    return con
+
+
 class SqliteStore:
-    def __init__(self, db_path: str | Path) -> None:
+    def __init__(self, db_path: str | Path, dim: int = DEFAULT_DIM) -> None:
         self.path = str(db_path)
-        self._conn = sqlite3.connect(self.path)
-        self._conn.execute("PRAGMA foreign_keys = ON")
-        # WAL persists in the file header; no-op for :memory:.
-        self._conn.execute("PRAGMA journal_mode = WAL")
+        self.dim = dim
+        self._conn = _open_connection(self.path)
 
     def init_schema(self) -> None:
-        self._conn.executescript(_SCHEMA)
-        self._conn.commit()
+        self._conn.execute(_RELATIONAL_SCHEMA)
+        self._conn.execute(
+            f"CREATE VIRTUAL TABLE IF NOT EXISTS chunk_vec "
+            f"USING vec0(chunk_id TEXT PRIMARY KEY, embedding float[{self.dim}])"
+        )
 
     def upsert_document(self, doc: Document) -> str:
         doc_id = f"{doc.source_id}:{doc.source_ref}"
-        self._conn.execute(
-            """
-            INSERT INTO document
-                (id, source_id, source_ref, title, url, published_at, content_hash, text, raw)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (source_id, source_ref) DO UPDATE SET
-                title=excluded.title, url=excluded.url, published_at=excluded.published_at,
-                content_hash=excluded.content_hash, text=excluded.text, raw=excluded.raw
-            """,
-            (
-                doc_id,
-                doc.source_id,
-                doc.source_ref,
-                doc.title,
-                doc.url,
-                doc.published_at.isoformat() if doc.published_at else None,
-                doc.content_hash,
-                doc.text,
-                json.dumps(doc.raw) if doc.raw is not None else None,
-            ),
-        )
-        self._conn.commit()
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO document
+                    (id, source_id, source_ref, title, url, published_at, content_hash, text, raw)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (source_id, source_ref) DO UPDATE SET
+                    title=excluded.title, url=excluded.url, published_at=excluded.published_at,
+                    content_hash=excluded.content_hash, text=excluded.text, raw=excluded.raw
+                """,
+                (
+                    doc_id,
+                    doc.source_id,
+                    doc.source_ref,
+                    doc.title,
+                    doc.url,
+                    doc.published_at.isoformat() if doc.published_at else None,
+                    doc.content_hash,
+                    doc.text,
+                    json.dumps(doc.raw) if doc.raw is not None else None,
+                ),
+            )
         return doc_id
 
     def content_hash_exists(self, content_hash: str) -> bool:
-        row = self._conn.execute(
-            "SELECT 1 FROM document WHERE content_hash = ? LIMIT 1", (content_hash,)
-        ).fetchone()
-        return row is not None
+        rows = list(
+            self._conn.execute(
+                "SELECT 1 FROM document WHERE content_hash = ? LIMIT 1", (content_hash,)
+            )
+        )
+        return len(rows) > 0
 
     def document_count(self) -> int:
-        return int(self._conn.execute("SELECT COUNT(*) FROM document").fetchone()[0])
+        return int(next(self._conn.execute("SELECT COUNT(*) FROM document"))[0])
 
     def upsert_chunks(
         self,
@@ -119,68 +150,117 @@ class SqliteStore:
         vectors: list[list[float]] | None = None,
         model_id: str | None = None,
     ) -> None:
-        # Replace semantics: a document's chunks are rewritten wholesale.
-        # TODO(odr): persist `vectors` into the sqlite-vec table in #10.
-        self._conn.execute("DELETE FROM chunk WHERE document_id = ?", (document_id,))
-        self._conn.executemany(
-            """
-            INSERT INTO chunk (id, document_id, ordinal, text, token_count, embedding_model)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            [
-                (
-                    f"{document_id}#{c.ordinal}",
-                    document_id,
-                    c.ordinal,
-                    c.text,
-                    c.token_count,
-                    model_id,
+        if vectors is not None and len(vectors) != len(chunks):
+            raise ValueError("vectors length must match chunks length")
+        with self._conn:
+            old_ids = [
+                r[0]
+                for r in self._conn.execute(
+                    "SELECT id FROM chunk WHERE document_id = ?", (document_id,)
                 )
-                for c in chunks
-            ],
-        )
-        self._conn.commit()
+            ]
+            for cid in old_ids:
+                self._conn.execute("DELETE FROM chunk_vec WHERE chunk_id = ?", (cid,))
+            self._conn.execute("DELETE FROM chunk WHERE document_id = ?", (document_id,))
+            self._conn.executemany(
+                """
+                INSERT INTO chunk (id, document_id, ordinal, text, token_count, embedding_model)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        f"{document_id}#{c.ordinal}",
+                        document_id,
+                        c.ordinal,
+                        c.text,
+                        c.token_count,
+                        model_id,
+                    )
+                    for c in chunks
+                ],
+            )
+            if vectors is not None:
+                self._conn.executemany(
+                    "INSERT INTO chunk_vec (chunk_id, embedding) VALUES (?, ?)",
+                    [
+                        (f"{document_id}#{c.ordinal}", sqlite_vec.serialize_float32(v))
+                        for c, v in zip(chunks, vectors, strict=True)
+                    ],
+                )
 
     def chunk_count(self, document_id: str | None = None) -> int:
         if document_id is None:
-            row = self._conn.execute("SELECT COUNT(*) FROM chunk").fetchone()
-        else:
-            row = self._conn.execute(
-                "SELECT COUNT(*) FROM chunk WHERE document_id = ?", (document_id,)
-            ).fetchone()
-        return int(row[0])
+            return int(next(self._conn.execute("SELECT COUNT(*) FROM chunk"))[0])
+        return int(
+            next(
+                self._conn.execute(
+                    "SELECT COUNT(*) FROM chunk WHERE document_id = ?", (document_id,)
+                )
+            )[0]
+        )
 
     def record_ingest_run(self, run: IngestRun) -> int:
-        cur = self._conn.execute(
-            """
-            INSERT INTO ingest_run
-            (source_id, started_at, finished_at, status, docs_seen, docs_new, docs_updated, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                run.source_id,
-                run.started_at.isoformat(),
-                run.finished_at.isoformat() if run.finished_at else None,
-                run.status,
-                run.docs_seen,
-                run.docs_new,
-                run.docs_updated,
-                run.error,
-            ),
-        )
-        self._conn.commit()
-        rowid = cur.lastrowid
-        assert rowid is not None
-        return rowid
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO ingest_run
+                    (source_id, started_at, finished_at, status, docs_seen,
+                     docs_new, docs_updated, error)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run.source_id,
+                    run.started_at.isoformat(),
+                    run.finished_at.isoformat() if run.finished_at else None,
+                    run.status,
+                    run.docs_seen,
+                    run.docs_new,
+                    run.docs_updated,
+                    run.error,
+                ),
+            )
+        return int(self._conn.last_insert_rowid())
 
     def ingest_run_count(self) -> int:
-        return int(self._conn.execute("SELECT COUNT(*) FROM ingest_run").fetchone()[0])
+        return int(next(self._conn.execute("SELECT COUNT(*) FROM ingest_run"))[0])
 
     def semantic_search(
         self, query_vec: list[float], k: int, filters: Filters | None = None
     ) -> list[ScoredChunk]:
-        # TODO(odr): implement via sqlite-vec in #10.
-        raise NotImplementedError("semantic_search lands in #10 (sqlite-vec)")
+        # TODO(odr): apply date/source `filters` in #21.
+        rows = self._conn.execute(
+            """
+            WITH knn AS (
+                SELECT chunk_id, distance
+                FROM chunk_vec
+                WHERE embedding MATCH ?
+                ORDER BY distance
+                LIMIT ?
+            )
+            SELECT knn.chunk_id, knn.distance, c.document_id, c.text,
+                   COALESCE(s.name, d.source_id), COALESCE(d.url, ''), d.published_at
+            FROM knn
+            JOIN chunk c ON c.id = knn.chunk_id
+            JOIN document d ON d.id = c.document_id
+            LEFT JOIN source s ON s.id = d.source_id
+            ORDER BY knn.distance
+            """,
+            (sqlite_vec.serialize_float32(query_vec), k),
+        )
+        results: list[ScoredChunk] = []
+        for chunk_id, distance, document_id, text, source_name, url, published in rows:
+            results.append(
+                ScoredChunk(
+                    chunk_id=chunk_id,
+                    document_id=document_id,
+                    text=text,
+                    score=1.0 / (1.0 + distance),
+                    source_name=source_name,
+                    url=url,
+                    published_at=date.fromisoformat(published) if published else None,
+                )
+            )
+        return results
 
     def keyword_search(
         self, query: str, k: int, filters: Filters | None = None
