@@ -87,6 +87,7 @@ class InMemoryStore:
             ScoredChunk(
                 chunk_id=chunk_id,
                 document_id=document_id,
+                title=doc.title if doc else "",
                 text=text,
                 score=1.0 / (1.0 + dist),
                 source_name=doc.source_id if doc else "",

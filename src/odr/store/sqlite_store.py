@@ -289,7 +289,7 @@ class SqliteStore:
                 ORDER BY distance
                 LIMIT ?
             )
-            SELECT knn.chunk_id, knn.distance, c.document_id, c.text,
+            SELECT knn.chunk_id, knn.distance, c.document_id, COALESCE(d.title, ''), c.text,
                    COALESCE(s.name, d.source_id), COALESCE(d.url, ''), d.published_at
             FROM knn
             JOIN chunk c ON c.id = knn.chunk_id
@@ -300,11 +300,12 @@ class SqliteStore:
             (sqlite_vec.serialize_float32(query_vec), k),
         )
         results: list[ScoredChunk] = []
-        for chunk_id, distance, document_id, text, source_name, url, published in rows:
+        for chunk_id, distance, document_id, title, text, source_name, url, published in rows:
             results.append(
                 ScoredChunk(
                     chunk_id=chunk_id,
                     document_id=document_id,
+                    title=title,
                     text=text,
                     score=1.0 / (1.0 + distance),
                     source_name=source_name,
