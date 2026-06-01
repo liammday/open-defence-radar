@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "apsw>=3.53.1.0",
+    "httpx>=0.28.1",
     "sqlite-vec>=0.1.9",
     "typer>=0.12",
 ]

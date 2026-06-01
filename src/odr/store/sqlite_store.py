@@ -19,7 +19,7 @@ from pathlib import Path
 import apsw
 import sqlite_vec
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk
+from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
 
 DEFAULT_DIM = 384  # BGE-small-en-v1.5; the local-embedder default arrives in #12.
 
@@ -104,6 +104,49 @@ class SqliteStore:
         self._conn.execute(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS chunk_vec "
             f"USING vec0(chunk_id TEXT PRIMARY KEY, embedding float[{self.dim}])"
+        )
+
+    def upsert_source(self, meta: SourceMeta) -> None:
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO source (id, name, url, access_method, licence, attribution, enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (id) DO UPDATE SET
+                    name=excluded.name, url=excluded.url,
+                    access_method=excluded.access_method, licence=excluded.licence,
+                    attribution=excluded.attribution, enabled=excluded.enabled
+                """,
+                (
+                    meta.id,
+                    meta.name,
+                    meta.url,
+                    meta.access_method,
+                    meta.licence,
+                    meta.attribution,
+                    int(meta.enabled),
+                ),
+            )
+
+    def get_source(self, source_id: str) -> SourceMeta | None:
+        rows = list(
+            self._conn.execute(
+                "SELECT id, name, url, access_method, licence, attribution, enabled "
+                "FROM source WHERE id = ?",
+                (source_id,),
+            )
+        )
+        if not rows:
+            return None
+        r = rows[0]
+        return SourceMeta(
+            id=r[0],
+            name=r[1],
+            url=r[2],
+            access_method=r[3],
+            licence=r[4],
+            attribution=r[5],
+            enabled=bool(r[6]),
         )
 
     def upsert_document(self, doc: Document) -> str:

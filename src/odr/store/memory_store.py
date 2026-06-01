@@ -6,7 +6,7 @@ runs against both and proves they are interchangeable behind the protocol.
 
 from __future__ import annotations
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk
+from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
 
 
 class InMemoryStore:
@@ -15,9 +15,16 @@ class InMemoryStore:
         self._chunks: dict[str, list[Chunk]] = {}
         self._ingest_runs: list[IngestRun] = []
         self._vectors: dict[str, list[float]] = {}
+        self._sources: dict[str, SourceMeta] = {}
 
     def init_schema(self) -> None:
         return None
+
+    def upsert_source(self, meta: SourceMeta) -> None:
+        self._sources[meta.id] = meta
+
+    def get_source(self, source_id: str) -> SourceMeta | None:
+        return self._sources.get(source_id)
 
     def upsert_document(self, doc: Document) -> str:
         doc_id = f"{doc.source_id}:{doc.source_ref}"
