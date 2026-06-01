@@ -11,6 +11,23 @@ import re
 from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
 
 
+def _passes(doc: Document | None, filters: Filters | None) -> bool:
+    """Whether a document satisfies the date/source filters (mirrors the SQL clause)."""
+    if filters is None:
+        return True
+    if doc is None:
+        return False
+    if filters.date_from is not None and (
+        doc.published_at is None or doc.published_at < filters.date_from
+    ):
+        return False
+    if filters.date_to is not None and (
+        doc.published_at is None or doc.published_at > filters.date_to
+    ):
+        return False
+    return not (filters.sources and doc.source_id not in filters.sources)
+
+
 class InMemoryStore:
     def __init__(self) -> None:
         self._documents: dict[str, Document] = {}
@@ -77,6 +94,8 @@ class InMemoryStore:
         scored: list[tuple[float, str, str, str, Document | None]] = []
         for document_id, chunks in self._chunks.items():
             doc = self._documents.get(document_id)
+            if not _passes(doc, filters):
+                continue
             for c in chunks:
                 chunk_id = f"{document_id}#{c.ordinal}"
                 vec = self._vectors.get(chunk_id)
@@ -108,6 +127,8 @@ class InMemoryStore:
         scored: list[tuple[int, str, str, str, Document | None]] = []
         for document_id, chunks in self._chunks.items():
             doc = self._documents.get(document_id)
+            if not _passes(doc, filters):
+                continue
             for c in chunks:
                 overlap = len(tokens & set(re.findall(r"\w+", c.text.lower())))
                 if overlap:

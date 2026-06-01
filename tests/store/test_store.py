@@ -15,7 +15,7 @@ import pytest
 from odr.store.base import Store
 from odr.store.memory_store import InMemoryStore
 from odr.store.sqlite_store import SqliteStore
-from odr.types import Chunk, Document, IngestRun, SourceMeta
+from odr.types import Chunk, Document, Filters, IngestRun, SourceMeta
 
 
 def _requires_store(_s: Store) -> None:
@@ -134,6 +134,43 @@ def test_keyword_search_no_match_returns_empty(store) -> None:  # type: ignore[n
     _seed_two_chunks(store)
     assert store.keyword_search("zzzznotpresent", k=5) == []
     assert store.keyword_search("   ", k=5) == []
+
+
+def _seed_two_sources_text(store) -> tuple[str, str]:  # type: ignore[no-untyped-def]
+    """Same text 'alpha signal' from two sources / dates, one chunk each (no vectors)."""
+    a = store.upsert_document(
+        Document("contracts-finder", "r1", "t", "u", "alpha signal", "h1", date(2026, 1, 1))
+    )
+    store.upsert_chunks(a, [Chunk(a, 0, "alpha signal", 2)])
+    b = store.upsert_document(
+        Document("find-a-tender", "r2", "t", "u", "alpha signal", "h2", date(2025, 1, 1))
+    )
+    store.upsert_chunks(b, [Chunk(b, 0, "alpha signal", 2)])
+    return a, b
+
+
+def test_keyword_search_filters_by_source_and_date(store) -> None:  # type: ignore[no-untyped-def]
+    a, _ = _seed_two_sources_text(store)
+    assert len(store.keyword_search("alpha", k=10)) == 2  # unfiltered: both
+    by_source = store.keyword_search("alpha", k=10, filters=Filters(sources=("contracts-finder",)))
+    assert [h.document_id for h in by_source] == [a]
+    by_date = store.keyword_search("alpha", k=10, filters=Filters(date_from=date(2026, 1, 1)))
+    assert [h.document_id for h in by_date] == [a]
+
+
+def test_semantic_search_filters_by_source(vec_store) -> None:  # type: ignore[no-untyped-def]
+    a = vec_store.upsert_document(
+        Document("contracts-finder", "r1", "t", "u", "alpha signal", "h1", date(2026, 1, 1))
+    )
+    vec_store.upsert_chunks(a, [Chunk(a, 0, "alpha", 1)], vectors=[[1.0, 0.0, 0.0]], model_id="m")
+    b = vec_store.upsert_document(
+        Document("find-a-tender", "r2", "t", "u", "alpha signal", "h2", date(2025, 1, 1))
+    )
+    vec_store.upsert_chunks(b, [Chunk(b, 0, "alpha", 1)], vectors=[[1.0, 0.0, 0.0]], model_id="m")
+    hits = vec_store.semantic_search(
+        [1.0, 0.0, 0.0], k=10, filters=Filters(sources=("contracts-finder",))
+    )
+    assert [h.document_id for h in hits] == [a]
 
 
 def test_sqlite_creates_tables_and_enables_wal(tmp_path) -> None:  # type: ignore[no-untyped-def]

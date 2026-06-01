@@ -285,12 +285,33 @@ class SqliteStore:
     def ingest_run_count(self) -> int:
         return int(next(self._conn.execute("SELECT COUNT(*) FROM ingest_run"))[0])
 
+    @staticmethod
+    def _filter_clause(filters: Filters | None) -> tuple[str, list[str]]:
+        """An AND-prefixed WHERE fragment + params for `document` filters."""
+        if filters is None:
+            return "", []
+        clauses: list[str] = []
+        params: list[str] = []
+        if filters.date_from is not None:
+            clauses.append("d.published_at >= ?")
+            params.append(filters.date_from.isoformat())
+        if filters.date_to is not None:
+            clauses.append("d.published_at <= ?")
+            params.append(filters.date_to.isoformat())
+        if filters.sources:
+            placeholders = ", ".join("?" for _ in filters.sources)
+            clauses.append(f"d.source_id IN ({placeholders})")
+            params.extend(filters.sources)
+        return (" AND " + " AND ".join(clauses), params) if clauses else ("", [])
+
     def semantic_search(
         self, query_vec: list[float], k: int, filters: Filters | None = None
     ) -> list[ScoredChunk]:
-        # TODO(odr): apply date/source `filters` in #21.
+        # Filters apply after the KNN candidate set (over-fetch + post-filter); a
+        # restrictive filter over a large corpus may want a larger pool (#21 note).
+        clause, fparams = self._filter_clause(filters)
         rows = self._conn.execute(
-            """
+            f"""
             WITH knn AS (
                 SELECT chunk_id, distance
                 FROM chunk_vec
@@ -304,9 +325,10 @@ class SqliteStore:
             JOIN chunk c ON c.id = knn.chunk_id
             JOIN document d ON d.id = c.document_id
             LEFT JOIN source s ON s.id = d.source_id
+            WHERE 1 = 1{clause}
             ORDER BY knn.distance
             """,
-            (sqlite_vec.serialize_float32(query_vec), k),
+            (sqlite_vec.serialize_float32(query_vec), k, *fparams),
         )
         results: list[ScoredChunk] = []
         for chunk_id, distance, document_id, title, text, source_name, url, published in rows:
@@ -332,8 +354,9 @@ class SqliteStore:
         if not tokens:
             return []
         match = " OR ".join(tokens)  # recall-oriented; ranks feed RRF fusion in #20
+        clause, fparams = self._filter_clause(filters)
         rows = self._conn.execute(
-            """
+            f"""
             WITH kw AS (
                 SELECT chunk_id, bm25(chunk_fts) AS rank
                 FROM chunk_fts
@@ -347,9 +370,10 @@ class SqliteStore:
             JOIN chunk c ON c.id = kw.chunk_id
             JOIN document d ON d.id = c.document_id
             LEFT JOIN source s ON s.id = d.source_id
+            WHERE 1 = 1{clause}
             ORDER BY kw.rank
             """,
-            (match, k),
+            (match, k, *fparams),
         )
         results: list[ScoredChunk] = []
         for chunk_id, rank, document_id, title, text, source_name, url, published in rows:
