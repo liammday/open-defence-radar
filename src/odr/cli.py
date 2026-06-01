@@ -15,8 +15,11 @@ from odr import __version__
 from odr.embed.factory import get_embedder
 from odr.ingest.chunk import WholeRecordChunker
 from odr.ingest.pipeline import run_ingest
+from odr.retrieve.retriever import Retriever
 from odr.sources.contracts_finder import ContractsFinder
 from odr.store.sqlite_store import SqliteStore
+from odr.synthesise.factory import get_generator
+from odr.synthesise.synthesiser import Synthesiser
 
 app = typer.Typer(
     help="open-defence-radar — grounded RAG over open defence-and-security signals.",
@@ -62,6 +65,31 @@ def ingest(
     typer.echo(
         f"{run.source_id}: {run.docs_seen} seen, {run.docs_new} new, "
         f"{run.docs_updated} updated — {run.status}"
+    )
+
+
+@app.command()
+def query(
+    topic: str = typer.Argument(..., help="What to ask"),
+    k: int = typer.Option(8, help="Number of passages to retrieve"),
+) -> None:
+    """Ask a grounded, cited question over the ingested corpus."""
+    embedder = get_embedder()
+    store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"), dim=embedder.dim)
+    store.init_schema()
+    passages = Retriever(store, embedder).retrieve(topic, k=k)
+    answer = Synthesiser(get_generator()).answer(topic, passages)
+
+    typer.echo(answer.text)
+    if answer.citations:
+        typer.echo("\nSources:")
+        for c in answer.citations:
+            published = c.published_at.isoformat() if c.published_at else None
+            bits = " · ".join(p for p in (c.source_name, published, c.document_title) if p)
+            typer.echo(f"  {c.marker} {bits} — {c.url}")
+    g = answer.groundedness
+    typer.echo(
+        f"\nGroundedness: {g.supported}/{g.total_claims} claims supported (score {g.score:.2f})"
     )
 
 

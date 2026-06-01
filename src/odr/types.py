@@ -40,6 +40,7 @@ class ScoredChunk:
 
     chunk_id: str
     document_id: str
+    title: str
     text: str
     score: float
     source_name: str
