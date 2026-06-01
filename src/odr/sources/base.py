@@ -11,12 +11,18 @@ from collections.abc import Iterator, Mapping
 from datetime import date
 from typing import Any, Protocol
 
+from odr.ingest.chunk import Chunker
 from odr.types import Document, SourceMeta
 
 
 class Source(Protocol):
     @property
     def meta(self) -> SourceMeta: ...
+
+    @property
+    def chunker(self) -> Chunker:
+        """The chunking strategy this source's content needs."""
+        ...
 
     def fetch(
         self, since: date | None = None, limit: int | None = None

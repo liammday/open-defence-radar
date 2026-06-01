@@ -12,7 +12,6 @@ import logging
 from datetime import UTC, date, datetime
 
 from odr.embed.base import Embedder
-from odr.ingest.chunk import Chunker
 from odr.sources.base import Source
 from odr.store.base import Store
 from odr.types import IngestRun
@@ -24,12 +23,12 @@ def run_ingest(
     source: Source,
     store: Store,
     embedder: Embedder,
-    chunker: Chunker,
     *,
     since: date | None = None,
     limit: int | None = None,
 ) -> IngestRun:
     store.upsert_source(source.meta)  # record provenance up front
+    chunker = source.chunker  # each source declares its chunking strategy
     started = datetime.now(UTC)
     seen = new = updated = errors = 0
 
