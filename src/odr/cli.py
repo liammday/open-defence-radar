@@ -9,11 +9,14 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from datetime import date
+from pathlib import Path
 
 import typer
 
 from odr import __version__
 from odr.embed.factory import get_embedder
+from odr.eval.judge import AnthropicJudge
+from odr.eval.runner import run_eval, write_result
 from odr.ingest.pipeline import run_ingest
 from odr.query import answer_query, build_filters
 from odr.sources.base import Source
@@ -99,6 +102,19 @@ def query(
     typer.echo(
         f"\nGroundedness: {g.supported}/{g.total_claims} claims supported (score {g.score:.2f})"
     )
+
+
+@app.command(name="eval")
+def evaluate() -> None:
+    """Run the evaluation harness against the fixture corpus; write data/eval/latest.json."""
+    result = run_eval(get_embedder(), get_generator(), AnthropicJudge())
+    path = write_result(result, Path(os.environ.get("ODR_EVAL_DIR", "data/eval")))
+    typer.echo(
+        f"hit-rate {result.hit_rate:.2f} · recall@k {result.recall_at_k:.2f} · "
+        f"MRR {result.mrr:.2f} · groundedness {result.groundedness:.2f} · "
+        f"unsupported {result.unsupported_claim_rate:.2f} ({result.question_count} questions)"
+    )
+    typer.echo(f"written: {path}")
 
 
 def main() -> None:
