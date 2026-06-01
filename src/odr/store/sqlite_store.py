@@ -199,6 +199,14 @@ class SqliteStore:
     def document_count(self) -> int:
         return int(next(self._conn.execute("SELECT COUNT(*) FROM document"))[0])
 
+    def latest_published(self, source_id: str) -> date | None:
+        row = next(
+            self._conn.execute(
+                "SELECT MAX(published_at) FROM document WHERE source_id = ?", (source_id,)
+            )
+        )
+        return date.fromisoformat(row[0]) if row[0] else None
+
     def upsert_chunks(
         self,
         document_id: str,

@@ -7,6 +7,7 @@ without touching callers. Vector + keyword search land in #10 / #19.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Protocol
 
 from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
@@ -33,6 +34,10 @@ class Store(Protocol):
 
     def document_exists(self, source_id: str, source_ref: str) -> bool:
         """True if a document with this (source_id, source_ref) is stored."""
+        ...
+
+    def latest_published(self, source_id: str) -> date | None:
+        """Newest published_at stored for a source (the incremental watermark)."""
         ...
 
     def document_count(self) -> int: ...
