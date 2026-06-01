@@ -24,6 +24,7 @@ from odr.sources.contracts_finder import ContractsFinder
 from odr.sources.find_a_tender import FindATender
 from odr.sources.govuk_news import GovUkNews
 from odr.store.sqlite_store import SqliteStore
+from odr.synthesise.factory import get_generator
 
 app = typer.Typer(
     help="open-defence-radar — grounded RAG over open defence-and-security signals.",

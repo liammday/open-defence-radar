@@ -73,6 +73,13 @@ def run_eval(
     )
 
 
+def load_thresholds() -> dict[str, float]:
+    """The eval floors/ceiling (ignores `_`-prefixed annotation keys)."""
+    path = Path(__file__).parent / "fixtures" / "thresholds.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return {k: float(v) for k, v in raw.items() if not k.startswith("_")}
+
+
 def write_result(result: EvalResult, directory: Path) -> Path:
     """Write latest.json (+ a timestamped history copy); return the latest path."""
     directory = Path(directory)
