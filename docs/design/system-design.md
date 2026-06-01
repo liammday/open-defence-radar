@@ -194,7 +194,7 @@ record IngestRun(docs_seen, docs_new, docs_updated, status, error)
 
 **Phase 0 — semantic only:**
 `embed(query)` → `store.semantic_search(qvec, k)` → join chunk→document→source →
-`ScoredChunk` (score = cosine similarity from `sqlite-vec` distance).
+`ScoredChunk` (score = `1 / (1 + d)` from the `sqlite-vec` L2 distance `d`).
 
 **Phase 1 — hybrid + filters:**
 ```
@@ -309,7 +309,7 @@ eval/
 | Generation error | retry transient; then MCP/console returns a **structured error**, never a fake answer |
 | Partial write crash | one transaction per document (doc + chunks + vectors atomic) → no orphan chunks |
 | Low groundedness | surfaced in `Answer.groundedness`; optional strict mode refuses to answer |
-| `sqlite-vec` won't load | detected at startup with a clear message + fallback guidance (`pysqlite3-binary`) — verified in the Phase 0 ingest issue |
+| `sqlite-vec` won't load | **Resolved (#10): the store uses `apsw`** — stdlib `sqlite3` (python.org macOS) lacks `enable_load_extension` and `pysqlite3-binary` has no arm64 wheel; apsw bundles SQLite with extension loading + cross-platform wheels |
 
 No silent failures: every fallback either records state (`ingest_run`) or returns
 a typed error. (Aligns with the guardrail posture and the `silent-failure-hunter`

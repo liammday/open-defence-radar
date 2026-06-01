@@ -14,6 +14,7 @@ class InMemoryStore:
         self._documents: dict[str, Document] = {}
         self._chunks: dict[str, list[Chunk]] = {}
         self._ingest_runs: list[IngestRun] = []
+        self._vectors: dict[str, list[float]] = {}
 
     def init_schema(self) -> None:
         return None
@@ -36,7 +37,14 @@ class InMemoryStore:
         vectors: list[list[float]] | None = None,
         model_id: str | None = None,
     ) -> None:
+        if vectors is not None and len(vectors) != len(chunks):
+            raise ValueError("vectors length must match chunks length")
         self._chunks[document_id] = list(chunks)
+        for cid in [c for c in self._vectors if c.startswith(f"{document_id}#")]:
+            del self._vectors[cid]
+        if vectors is not None:
+            for c, v in zip(chunks, vectors, strict=True):
+                self._vectors[f"{document_id}#{c.ordinal}"] = list(v)
 
     def chunk_count(self, document_id: str | None = None) -> int:
         if document_id is None:
@@ -53,7 +61,30 @@ class InMemoryStore:
     def semantic_search(
         self, query_vec: list[float], k: int, filters: Filters | None = None
     ) -> list[ScoredChunk]:
-        raise NotImplementedError("semantic_search lands in #10 (sqlite-vec)")
+        # Brute-force L2 over stored vectors — same metric/scoring as SqliteStore.
+        scored: list[tuple[float, str, str, str, Document | None]] = []
+        for document_id, chunks in self._chunks.items():
+            doc = self._documents.get(document_id)
+            for c in chunks:
+                chunk_id = f"{document_id}#{c.ordinal}"
+                vec = self._vectors.get(chunk_id)
+                if vec is None:
+                    continue
+                dist = sum((a - b) ** 2 for a, b in zip(query_vec, vec, strict=True)) ** 0.5
+                scored.append((dist, chunk_id, document_id, c.text, doc))
+        scored.sort(key=lambda r: r[0])
+        return [
+            ScoredChunk(
+                chunk_id=chunk_id,
+                document_id=document_id,
+                text=text,
+                score=1.0 / (1.0 + dist),
+                source_name=doc.source_id if doc else "",
+                url=doc.url if doc else "",
+                published_at=doc.published_at if doc else None,
+            )
+            for dist, chunk_id, document_id, text, doc in scored[:k]
+        ]
 
     def keyword_search(
         self, query: str, k: int, filters: Filters | None = None

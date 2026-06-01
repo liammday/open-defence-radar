@@ -7,9 +7,9 @@ the parametrised ``store`` fixture, proving they are interchangeable behind the
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import date, datetime
 
+import apsw
 import pytest
 
 from odr.store.base import Store
@@ -95,10 +95,37 @@ def test_record_ingest_run(store) -> None:  # type: ignore[no-untyped-def]
 def test_sqlite_creates_tables_and_enables_wal(tmp_path) -> None:  # type: ignore[no-untyped-def]
     path = tmp_path / "odr.sqlite3"
     SqliteStore(path).init_schema()
-    con = sqlite3.connect(path)
+    con = apsw.Connection(str(path))
     try:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert {"source", "document", "chunk", "ingest_run"} <= tables
-        assert con.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
+        assert list(con.execute("PRAGMA journal_mode"))[0][0].lower() == "wal"
     finally:
         con.close()
+
+
+@pytest.fixture(params=["memory", "sqlite"])
+def vec_store(request: pytest.FixtureRequest, tmp_path):  # type: ignore[no-untyped-def]
+    """A store configured for 3-dimensional vectors, populated via upsert_chunks."""
+    if request.param == "memory":
+        s: InMemoryStore | SqliteStore = InMemoryStore()
+    else:
+        s = SqliteStore(tmp_path / "vec.sqlite3", dim=3)
+    s.init_schema()
+    return s
+
+
+def test_semantic_search_returns_nearest_first(vec_store) -> None:  # type: ignore[no-untyped-def]
+    doc_id = vec_store.upsert_document(_doc())
+    vec_store.upsert_chunks(
+        doc_id,
+        [Chunk(doc_id, 0, "about cats", 2), Chunk(doc_id, 1, "about dogs", 2)],
+        vectors=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        model_id="test-model",
+    )
+    hits = vec_store.semantic_search([0.9, 0.1, 0.0], k=2)
+    assert len(hits) == 2
+    assert hits[0].chunk_id == f"{doc_id}#0"  # nearest to the query vector
+    assert hits[0].score >= hits[1].score
+    assert hits[0].document_id == doc_id
+    assert hits[0].text == "about cats"
