@@ -63,3 +63,24 @@ def test_empty_sub_answer_renders_a_note_not_a_fabrication() -> None:
     )
     assert "No grounded passages matched" in brief.text
     assert [c.marker for c in brief.citations] == ["[1]"]
+
+
+def test_falls_back_to_source_split_when_planner_returns_nothing() -> None:
+    calls: list[tuple[str, Filters | None]] = []
+
+    def query_fn(topic: str, k: int, filters: Filters | None) -> Answer:
+        calls.append((topic, filters))
+        return _answer(f"Re {topic} [1].", (_cite("[1]", f"https://u/{len(calls)}"),), 1)
+
+    brief = decompose_and_answer(
+        "broad question",
+        planner=FakePlanner([]),  # planner yields nothing -> fallback
+        query_fn=query_fn,
+        fallback_sources=("contracts-finder", "govuk-mod"),
+    )
+
+    # one call per fallback source, each filtered to that source, all with the original question
+    assert [t for t, _ in calls] == ["broad question", "broad question"]
+    assert [f.sources for _, f in calls if f] == [("contracts-finder",), ("govuk-mod",)]
+    assert brief.sub_questions == ("From contracts-finder", "From govuk-mod")
+    assert len(brief.citations) == 2  # distinct urls, not deduped
