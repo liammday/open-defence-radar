@@ -102,6 +102,17 @@ def test_hallucinated_citation_is_not_resolved() -> None:
     assert answer.groundedness.unsupported == 1
 
 
+def test_grouped_citation_markers_resolve_all_numbers() -> None:
+    passages = [_passage(f"c{i}", f"Doc {i}", f"fact {i}") for i in range(1, 6)]
+    gen = FakeGenerator("AI and robotics [2, 3, 4]. Also autonomy [1, 5].")
+    answer = Synthesiser(gen).answer("q", passages)
+    # every number inside a grouped marker resolves to a citation
+    assert [c.marker for c in answer.citations] == ["[1]", "[2]", "[3]", "[4]", "[5]"]
+    # both sentences carry a (grouped) marker → both supported
+    assert answer.groundedness.total_claims == 2
+    assert answer.groundedness.supported == 2
+
+
 def test_synthesiser_gives_reasoning_models_token_room() -> None:
     # Reasoning models "think" before answering; without ample budget the cited
     # answer truncates mid-sentence (and may drop its [n] markers).
