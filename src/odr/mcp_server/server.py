@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from odr.query import answer_query, build_filters
@@ -70,6 +71,7 @@ def query(
 
 def main() -> None:
     """Console-script entry point (stdio transport)."""
+    load_dotenv()  # pick up GOOGLE_API_KEY etc. from a local .env
     mcp.run()
 
 
