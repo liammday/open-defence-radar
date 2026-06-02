@@ -3,7 +3,8 @@
 Runs the real app — with a fake query function and context, so no model, store, or
 network — under a background uvicorn server, and drives it with Playwright/Chromium.
 Asserts the console renders a grounded answer with citation chips and no console
-errors, and the trust dashboard renders its metrics.
+errors, the trust dashboard renders its metrics, and a backend failure surfaces a
+structured error (the real reason, not a generic hint).
 
 Skipped unless ODR_E2E=1; needs a browser: `uv run playwright install chromium`.
 """
@@ -16,12 +17,14 @@ import threading
 import time
 import urllib.request
 from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date
 
 import pytest
 import uvicorn
+from fastapi import FastAPI
 
-from odr.types import Answer, Citation, GroundednessReport, ScoredChunk, SourceStat
+from odr.types import Answer, Citation, Filters, GroundednessReport, ScoredChunk, SourceStat
 from odr.web.app import SiteContext, create_app
 from odr.web.trust import MetricView, TrustView
 
@@ -94,9 +97,9 @@ def _free_port() -> int:
     return port
 
 
-@pytest.fixture(scope="module")
-def server_url() -> Iterator[str]:
-    app = create_app(query_fn=lambda topic, k, filters: _answer(), context_provider=_ctx)
+@contextmanager
+def _serve(app: FastAPI) -> Iterator[str]:
+    """Run `app` under a background uvicorn server; yield its base URL."""
     port = _free_port()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
     thread = threading.Thread(target=server.run, daemon=True)
@@ -108,9 +111,27 @@ def server_url() -> Iterator[str]:
             break
         except OSError:
             time.sleep(0.1)
-    yield url
-    server.should_exit = True
-    thread.join(timeout=5)
+    try:
+        yield url
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+
+
+@pytest.fixture(scope="module")
+def server_url() -> Iterator[str]:
+    app = create_app(query_fn=lambda topic, k, filters: _answer(), context_provider=_ctx)
+    with _serve(app) as url:
+        yield url
+
+
+@pytest.fixture(scope="module")
+def error_server_url() -> Iterator[str]:
+    def boom(topic: str, k: int, filters: Filters | None) -> Answer:
+        raise RuntimeError("Gemini API rate-limited (HTTP 429): quota exceeded")
+
+    with _serve(create_app(query_fn=boom, context_provider=_ctx)) as url:
+        yield url
 
 
 def test_console_renders_grounded_answer(server_url: str, page) -> None:  # type: ignore[no-untyped-def]
@@ -138,3 +159,14 @@ def test_trust_renders_metrics(server_url: str, page) -> None:  # type: ignore[n
     assert page.locator(".meter .explain").count() >= 1  # plain-English captions present
     assert "all floors met" in page.content()
     assert errors == []
+
+
+def test_console_surfaces_the_real_error(error_server_url: str, page) -> None:  # type: ignore[no-untyped-def]
+    page.goto(error_server_url + "/")
+    page.fill("#q", "anything")
+    page.click("#submit-btn")
+    page.wait_for_selector("#status-msg:not([hidden])")
+
+    msg = page.locator("#status-msg").inner_text()
+    assert "rate-limited" in msg  # the real backend reason is shown
+    assert "Is the model server" not in msg  # not the old generic LM-Studio hint

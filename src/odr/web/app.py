@@ -8,16 +8,16 @@ returns the same JSON contract as the MCP `query` tool (design §4).
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -28,6 +28,15 @@ from odr.types import Answer, Filters, SourceStat
 from odr.web.trust import TrustView, load_trust_view
 
 QueryFn = Callable[[str, int, Filters | None], Answer]
+
+_log = logging.getLogger("odr.web")
+
+
+def _error_reason(exc: Exception) -> str:
+    """A concise, human-readable reason from a query/generation failure."""
+    message = str(exc).strip()
+    return (message.splitlines()[0] if message else exc.__class__.__name__)[:200]
+
 
 _HERE = Path(__file__).resolve().parent
 _templates = Jinja2Templates(directory=str(_HERE / "templates"))
@@ -96,9 +105,15 @@ def create_app(
         return {"status": "ok"}
 
     @app.post("/query")
-    def query(req: QueryRequest) -> dict[str, Any]:
+    def query(req: QueryRequest) -> JSONResponse:
         filters = build_filters(req.date_from, req.date_to, req.sources)
-        return answer_to_dict(query_fn(req.topic, req.k, filters))
+        try:
+            return JSONResponse(content=answer_to_dict(query_fn(req.topic, req.k, filters)))
+        except Exception as exc:
+            # Boundary: surface a structured error with the real reason instead of a bare
+            # 500, and log the full trace server-side — never a silent failure.
+            _log.exception("query failed for topic=%r", req.topic)
+            return JSONResponse(status_code=502, content={"error": _error_reason(exc)})
 
     @app.get("/", response_class=HTMLResponse)
     def console(request: Request) -> HTMLResponse:

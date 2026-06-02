@@ -124,6 +124,17 @@ def test_query_passes_parsed_filters_to_use_case() -> None:
     assert filters.sources == ("contracts-finder",)
 
 
+def test_query_returns_structured_error_when_generation_fails() -> None:
+    def boom(topic: str, k: int, filters: Filters | None) -> Answer:
+        raise RuntimeError("Gemini API rate-limited (HTTP 429): quota exceeded")
+
+    client = TestClient(create_app(query_fn=boom), raise_server_exceptions=False)
+    resp = client.post("/query", json={"topic": "anything"})
+
+    assert resp.status_code == 502  # not a bare 500
+    assert "rate-limited" in resp.json()["error"]  # the real reason, surfaced
+
+
 def test_healthz_returns_ok() -> None:
     client = TestClient(create_app())
     resp = client.get("/healthz")
