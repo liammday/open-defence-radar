@@ -15,7 +15,7 @@ import typer
 
 from odr import __version__
 from odr.embed.factory import get_embedder
-from odr.eval.judge import AnthropicJudge
+from odr.eval.judge import LLMJudge
 from odr.eval.runner import run_eval, write_result
 from odr.ingest.pipeline import run_ingest
 from odr.query import answer_query, build_filters
@@ -108,7 +108,7 @@ def query(
 @app.command(name="eval")
 def evaluate() -> None:
     """Run the evaluation harness against the fixture corpus; write data/eval/latest.json."""
-    result = run_eval(get_embedder(), get_generator(), AnthropicJudge())
+    result = run_eval(get_embedder(), get_generator(), LLMJudge())
     path = write_result(result, Path(os.environ.get("ODR_EVAL_DIR", "data/eval")))
     typer.echo(
         f"hit-rate {result.hit_rate:.2f} · recall@k {result.recall_at_k:.2f} · "

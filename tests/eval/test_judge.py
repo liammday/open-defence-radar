@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from odr.eval.judge import AnthropicJudge, FakeJudge, Judge
+from odr.eval.judge import FakeJudge, Judge, LLMJudge
 from odr.synthesise.fake_generator import FakeGenerator
 
 
@@ -24,7 +24,7 @@ class _CountingGenerator:
 
 def test_judges_conform_to_protocol() -> None:
     _requires_judge(FakeJudge())
-    _requires_judge(AnthropicJudge(generator=FakeGenerator("yes")))
+    _requires_judge(LLMJudge(generator=FakeGenerator("yes")))
 
 
 def test_fake_judge_uses_rule() -> None:
@@ -35,7 +35,7 @@ def test_fake_judge_uses_rule() -> None:
 
 def test_anthropic_judge_caches_by_pair() -> None:
     gen = _CountingGenerator()
-    judge = AnthropicJudge(generator=gen)
+    judge = LLMJudge(generator=gen)
     assert judge.judge("claim", "passage") is True
     assert judge.judge("claim", "passage") is True
     assert gen.calls == 1  # second identical pair served from cache
@@ -44,5 +44,5 @@ def test_anthropic_judge_caches_by_pair() -> None:
 
 
 def test_anthropic_judge_parses_no() -> None:
-    judge = AnthropicJudge(generator=FakeGenerator("No — the passage does not support it."))
+    judge = LLMJudge(generator=FakeGenerator("No — the passage does not support it."))
     assert judge.judge("claim", "passage") is False

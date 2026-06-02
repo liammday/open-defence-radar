@@ -37,9 +37,9 @@ def test_retrieval_metrics_clear_floors() -> None:
 )
 def test_groundedness_clears_floor_with_real_providers() -> None:
     from odr.embed.factory import get_embedder
-    from odr.eval.judge import AnthropicJudge
+    from odr.eval.judge import LLMJudge
     from odr.synthesise.factory import get_generator
 
-    result = run_eval(get_embedder(), get_generator(), AnthropicJudge())
+    result = run_eval(get_embedder(), get_generator(), LLMJudge())
     assert result.groundedness >= _THRESHOLDS["groundedness"]
     assert result.unsupported_claim_rate <= _THRESHOLDS["unsupported_claim_rate"]
