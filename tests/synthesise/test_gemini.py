@@ -63,10 +63,14 @@ def test_generate_without_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_rate_limit_raises_clean_error_without_leaking_key() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(429, json={"error": "RESOURCE_EXHAUSTED"})
+        return httpx.Response(
+            429,
+            json={"error": {"message": "Quota exceeded for free tier", "status": "EXHAUSTED"}},
+        )
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     gen = GeminiGenerator(api_key="secret", client=client)
     with pytest.raises(RuntimeError, match="429") as exc:
         gen.generate("s", "u")
+    assert "Quota exceeded for free tier" in str(exc.value)  # Google's reason is surfaced
     assert "secret" not in str(exc.value)  # the key must never appear in errors
