@@ -7,18 +7,26 @@
   <p class="lede">Every answer is synthesised <em>only</em> from retrieved open-source passages, and every claim is traceable to a fetched, licensed record.</p>
 
   <form class="query" id="query-form">
-    <label for="q">Query</label>
+    <label for="q">Ask a question</label>
     <div class="field">
-      <span class="caret" aria-hidden="true">›</span>
-      <input id="q" name="q" value="Which UK defence contracts mention AI or autonomy?" aria-label="Query" autocomplete="off" />
+      <div class="inputbox">
+        <span class="caret" aria-hidden="true">›</span>
+        <input id="q" name="q" value="Which UK defence contracts mention AI or autonomy?" aria-label="Your question" autocomplete="off" />
+      </div>
       <button type="submit" id="submit-btn">Retrieve</button>
     </div>
+    <p class="qhint">Type your own question above, or pick an example ↓</p>
     <div class="chips" aria-label="Example queries">
       {% for ex in examples %}<button type="button" class="chip">{{ ex }}</button>{% endfor %}
     </div>
   </form>
 
   <div class="status-msg" id="status-msg" hidden></div>
+
+  <div class="loading" id="loading" hidden>
+    <p class="loading-line"><span class="spinner" aria-hidden="true"></span>Retrieving passages and synthesising a grounded answer… <b id="elapsed">0s</b></p>
+    <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </div>
 
   <div class="results" id="results" hidden>
     <div class="brief">
@@ -34,6 +42,7 @@
       <div class="gauge">
         <div class="top"><span class="lab">Groundedness</span><span class="val" id="g-val">—</span></div>
         <div class="track"><div class="fill good" id="g-fill" data-to="100%"></div><div class="markline" data-l="floor .90" style="left:90%"></div></div>
+        <p class="gauge-note">Share of this answer's claims supported by a retrieved passage.</p>
       </div>
       <div class="kv"><span class="k">retrieved</span><span class="v"><b id="r-count">—</b> passages</span></div>
       <div class="kv"><span class="k">fusion</span><span class="v">semantic + BM25 · RRF</span></div>

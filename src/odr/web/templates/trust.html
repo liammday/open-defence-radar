@@ -27,6 +27,7 @@
         <div class="markline" data-l="{{ 'ceiling' if m.inverted else 'floor' }}" style="left:{{ m.marker_pct }}%"></div>
       </div>
       <div class="spark" data-vals="{{ m.spark_vals }}"></div>
+      <p class="explain">{{ m.explanation }}</p>
     </div>
     {% endfor %}
   </div>

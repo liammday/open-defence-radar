@@ -29,16 +29,37 @@ document.querySelectorAll(".chip").forEach((ch) =>
 );
 
 // ── citation popovers (delegated: chips are injected after a query) ──────────
+// keep the card within the viewport: measure, then nudge horizontally via --shift
+function positionProv(cite) {
+  const prov = cite && cite.querySelector(".prov");
+  if (!prov) return;
+  prov.style.setProperty("--shift", "0px");
+  const r = prov.getBoundingClientRect();
+  const pad = 12;
+  let shift = 0;
+  if (r.right > window.innerWidth - pad) shift = window.innerWidth - pad - r.right;
+  else if (r.left < pad) shift = pad - r.left;
+  if (shift) prov.style.setProperty("--shift", Math.round(shift) + "px");
+}
 document.addEventListener("click", (e) => {
   const cite = e.target.closest && e.target.closest(".cite");
   document.querySelectorAll(".cite.open").forEach((o) => { if (o !== cite) o.classList.remove("open"); });
-  if (cite) { e.stopPropagation(); cite.classList.toggle("open"); }
+  if (cite) { e.stopPropagation(); if (cite.classList.toggle("open")) positionProv(cite); }
 });
 document.addEventListener("keydown", (e) => {
   const cite = e.target.closest && e.target.closest(".cite");
   if (!cite) return;
-  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cite.classList.toggle("open"); }
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (cite.classList.toggle("open")) positionProv(cite); }
   if (e.key === "Escape") cite.classList.remove("open");
+});
+// hover + keyboard-focus popovers should stay on-screen too
+document.addEventListener("mouseover", (e) => {
+  const cite = e.target.closest && e.target.closest(".cite");
+  if (cite) positionProv(cite);
+});
+document.addEventListener("focusin", (e) => {
+  const cite = e.target.closest && e.target.closest(".cite");
+  if (cite) positionProv(cite);
 });
 
 // ── console query ────────────────────────────────────────────────────────────
@@ -139,9 +160,18 @@ if (form) {
     if (!topic) return;
     const btn = document.getElementById("submit-btn");
     const label = btn.textContent;
+    const loading = document.getElementById("loading");
+    const elapsed = document.getElementById("elapsed");
     btn.disabled = true;
     btn.textContent = "Retrieving…";
     document.getElementById("status-msg").hidden = true;
+    document.getElementById("results").hidden = true;
+    loading.hidden = false;
+    const t0 = Date.now();
+    elapsed.textContent = "0s";
+    const timer = setInterval(() => {
+      elapsed.textContent = Math.round((Date.now() - t0) / 1000) + "s";
+    }, 250);
     try {
       const resp = await fetch("/query", {
         method: "POST",
@@ -154,6 +184,8 @@ if (form) {
       document.getElementById("results").hidden = true;
       setStatus("Query failed: " + err.message + ". Is the model server (LM Studio) running?", true);
     } finally {
+      clearInterval(timer);
+      loading.hidden = true;
       btn.disabled = false;
       btn.textContent = label;
     }
