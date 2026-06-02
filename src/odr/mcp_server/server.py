@@ -14,34 +14,9 @@ from typing import Any
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
-from odr.query import answer_query, build_filters
-from odr.types import Answer
+from odr.query import answer_query, answer_to_dict, build_filters
 
 mcp = FastMCP("open-defence-radar")
-
-
-def _answer_to_dict(answer: Answer) -> dict[str, Any]:
-    g = answer.groundedness
-    return {
-        "answer": answer.text,
-        "citations": [
-            {
-                "marker": c.marker,
-                "title": c.document_title,
-                "source": c.source_name,
-                "url": c.url,
-                "published_at": c.published_at.isoformat() if c.published_at else None,
-            }
-            for c in answer.citations
-        ],
-        "groundedness": {
-            "total_claims": g.total_claims,
-            "supported": g.supported,
-            "unsupported": g.unsupported,
-            "score": g.score,
-        },
-        "retrieved_count": len(answer.retrieved),
-    }
 
 
 @mcp.tool()
@@ -66,7 +41,7 @@ def query(
         date_to: Only consider records published on/before this YYYY-MM-DD.
         sources: Restrict to these source ids (e.g. ["contracts-finder"]).
     """
-    return _answer_to_dict(answer_query(topic, k, build_filters(date_from, date_to, sources)))
+    return answer_to_dict(answer_query(topic, k, build_filters(date_from, date_to, sources)))
 
 
 def main() -> None:

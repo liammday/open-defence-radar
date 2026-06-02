@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 from datetime import date
 
-from odr.mcp_server.server import _answer_to_dict, mcp
+from odr.mcp_server.server import mcp
+from odr.query import answer_to_dict
 from odr.types import Answer, Citation, GroundednessReport, ScoredChunk
 
 
@@ -35,7 +36,7 @@ def test_answer_to_dict_matches_contract() -> None:
             ),
         ),
     )
-    out = _answer_to_dict(answer)
+    out = answer_to_dict(answer)
     assert out["answer"] == "The MoD bought AI tooling [1]."
     assert out["retrieved_count"] == 1
     assert out["groundedness"] == {

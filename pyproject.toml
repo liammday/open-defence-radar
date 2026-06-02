@@ -7,12 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.105.2",
     "apsw>=3.53.1.0",
+    "fastapi>=0.115",
     "fastembed>=0.8.0",
     "httpx>=0.28.1",
     "mcp>=1.27.2",
     "python-dotenv>=1.2.2",
     "sqlite-vec>=0.1.9",
     "typer>=0.12",
+    "uvicorn[standard]>=0.30",
 ]
 
 # License is intentionally unset until the public-release decision (MIT vs Apache-2.0),
@@ -21,6 +23,7 @@ dependencies = [
 [project.scripts]
 odr = "odr.cli:main"
 odr-mcp = "odr.mcp_server.server:main"
+odr-web = "odr.web.app:main"
 
 [dependency-groups]
 dev = [
@@ -66,3 +69,9 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Starlette's TestClient warns that its httpx integration will change; test-only,
+# upstream, and out of our control — silence it so CI output stays clean.
+# (StarletteDeprecationWarning subclasses UserWarning, not DeprecationWarning.)
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
+]
