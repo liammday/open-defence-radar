@@ -178,11 +178,18 @@ if (form) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic }),
       });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      if (!resp.ok) {
+        let reason = "HTTP " + resp.status;
+        try {
+          const body = await resp.json();
+          if (body && body.error) reason = body.error;
+        } catch { /* no JSON body — keep the status-code reason */ }
+        throw new Error(reason);
+      }
       renderAnswer(await resp.json());
     } catch (err) {
       document.getElementById("results").hidden = true;
-      setStatus("Query failed: " + err.message + ". Is the model server (LM Studio) running?", true);
+      setStatus("Query failed — " + err.message, true);
     } finally {
       clearInterval(timer);
       loading.hidden = true;
