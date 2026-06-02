@@ -39,7 +39,10 @@ class LLMPlanner:
         self._max = max_subs
 
     def plan(self, question: str) -> list[str]:
-        out = self._generator.generate(_SYSTEM, question, max_tokens=200, temperature=0.0)
+        # Generous budget: reasoning models (e.g. Gemma 3n) spend hundreds of tokens
+        # "thinking" before the sub-questions appear in `content`; too small a cap
+        # leaves content empty and forces the orchestrator's fallback.
+        out = self._generator.generate(_SYSTEM, question, max_tokens=1024, temperature=0.0)
         subs: list[str] = []
         for line in out.splitlines():
             cleaned = line.lstrip("0123456789.)-*• \t").strip()
