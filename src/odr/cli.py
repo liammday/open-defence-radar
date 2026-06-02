@@ -12,6 +12,7 @@ from datetime import date
 from pathlib import Path
 
 import typer
+from dotenv import load_dotenv
 
 from odr import __version__
 from odr.embed.factory import get_embedder
@@ -120,6 +121,7 @@ def evaluate() -> None:
 
 def main() -> None:
     """Console-script entry point (see ``[project.scripts]`` in pyproject)."""
+    load_dotenv()  # pick up GOOGLE_API_KEY etc. from a local .env
     app()
 
 
