@@ -56,7 +56,9 @@ def _default_context() -> SiteContext:
     """Live context from the SQLite store + eval artifacts (read fresh per request)."""
     from odr.store.sqlite_store import SqliteStore
 
-    store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"))
+    db_path = Path(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"))
+    db_path.parent.mkdir(parents=True, exist_ok=True)  # first run: create the data dir
+    store = SqliteStore(db_path)
     store.init_schema()  # no-op on an existing store; creates empty tables otherwise
     provenance = tuple(store.source_breakdown())
     eval_dir = os.environ.get("ODR_EVAL_DIR", "data/eval")
