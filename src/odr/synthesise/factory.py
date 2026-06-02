@@ -7,6 +7,7 @@ import os
 from odr.synthesise.anthropic_generator import AnthropicGenerator
 from odr.synthesise.base import Generator
 from odr.synthesise.gemini_generator import GeminiGenerator
+from odr.synthesise.openai_compatible import OpenAICompatibleGenerator
 
 
 def get_generator(name: str | None = None) -> Generator:
@@ -15,4 +16,6 @@ def get_generator(name: str | None = None) -> Generator:
         return GeminiGenerator()
     if name == "anthropic":
         return AnthropicGenerator()
-    raise ValueError(f"Unknown generator {name!r} (expected 'gemini' or 'anthropic')")
+    if name == "lmstudio":  # any OpenAI-compatible local server (LM Studio, Ollama, vLLM)
+        return OpenAICompatibleGenerator()
+    raise ValueError(f"Unknown generator {name!r} (expected 'gemini', 'anthropic', or 'lmstudio')")

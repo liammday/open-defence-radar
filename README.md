@@ -101,9 +101,11 @@ groundedness read, and the retrieved-passage count.
 |---|---|---|
 | `GOOGLE_API_KEY` | — | Required for synthesis when `ODR_GENERATOR=gemini` (the default). Free tier. |
 | `ANTHROPIC_API_KEY` | — | Required for synthesis when `ODR_GENERATOR=anthropic` (pay-per-use). |
-| `ODR_GENERATOR` | `gemini` | `gemini` (free tier) · `anthropic` (pay-per-use). |
+| `ODR_GENERATOR` | `gemini` | `gemini` (free tier) · `anthropic` (pay-per-use) · `lmstudio` (local). |
 | `ODR_GEMINI_MODEL` | `gemini-2.0-flash` | Override the Gemini model. |
 | `ODR_ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Override the Claude model. |
+| `ODR_LLM_BASE_URL` | `http://localhost:1234/v1` | OpenAI-compatible server for `lmstudio` (LM Studio / Ollama). |
+| `ODR_LLM_MODEL` | `local-model` | The model id loaded in that server (e.g. `google/gemma-4-e4b`). |
 | `ODR_EMBEDDER` | `local` | `local` (offline BGE) · `fake` (tests). |
 | `ODR_DB_PATH` | `data/odr.sqlite3` | SQLite store location. |
 | `ODR_RERANK` | `0` | `1` enables the cross-encoder reranker (experimental; eval-gated). |
