@@ -125,6 +125,20 @@ container at a local LM Studio / Ollama on the host (`host.docker.internal`).
 Ingest + eval still run on the host (`uv run odr ingest …`, `uv run odr eval`),
 writing into `./data`, which the container reads.
 
+## Agentic decomposition
+
+For questions too broad for a single retrieval, `odr agent` plans the question into
+focused sub-questions, runs each through the same grounded `query`, and recombines
+them into **one cited brief** — every claim still traces to a fetched source.
+
+```bash
+uv run odr agent "Which UK defence contracts and MoD announcements mention AI or autonomy?"
+```
+
+`examples/agent_via_mcp.py` does the same as a real **MCP client** — spawning `odr-mcp`
+and calling the `query` tool per sub-question — to rehearse FDE-style decomposition
+over the protocol.
+
 ## Configuration
 
 | Variable | Default | Purpose |

@@ -93,6 +93,17 @@ class Answer:
 
 
 @dataclass(frozen=True)
+class Brief:
+    """A decomposed, recombined answer: sub-questions + one cited brief."""
+
+    question: str
+    sub_questions: tuple[str, ...]
+    text: str
+    citations: tuple[Citation, ...]
+    groundedness: GroundednessReport
+
+
+@dataclass(frozen=True)
 class IngestRun:
     """A record of one ingest job, for the ingest log."""
 
