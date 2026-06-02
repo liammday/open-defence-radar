@@ -33,6 +33,7 @@ def test_generate_builds_request_and_parses_response() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured["url"] = str(request.url)
+        captured["api_key"] = request.headers.get("x-goog-api-key")
         captured["body"] = json.loads(request.content)
         return httpx.Response(
             200, json={"candidates": [{"content": {"parts": [{"text": "Grounded answer [1]."}]}}]}
@@ -44,7 +45,10 @@ def test_generate_builds_request_and_parses_response() -> None:
 
     assert out == "Grounded answer [1]."
     assert "gemini-2.0-flash:generateContent" in captured["url"]  # type: ignore[operator]
-    assert "key=secret" in captured["url"]  # type: ignore[operator]
+    # the key travels in a header and must NEVER appear in the URL (it would leak
+    # into tracebacks/logs otherwise)
+    assert captured["api_key"] == "secret"
+    assert "secret" not in captured["url"]  # type: ignore[operator]
     body = captured["body"]
     assert body["systemInstruction"]["parts"][0]["text"] == "SYSTEM"  # type: ignore[index]
     assert body["contents"][0]["parts"][0]["text"] == "USER"  # type: ignore[index]
@@ -55,3 +59,14 @@ def test_generate_without_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="GOOGLE_API_KEY"):
         GeminiGenerator().generate("s", "u")
+
+
+def test_rate_limit_raises_clean_error_without_leaking_key() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": "RESOURCE_EXHAUSTED"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    gen = GeminiGenerator(api_key="secret", client=client)
+    with pytest.raises(RuntimeError, match="429") as exc:
+        gen.generate("s", "u")
+    assert "secret" not in str(exc.value)  # the key must never appear in errors
