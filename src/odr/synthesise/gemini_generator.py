@@ -45,9 +45,16 @@ class GeminiGenerator:
             },
         )
         if resp.status_code == 429:
+            detail = ""
+            try:  # surface Google's reason; the response body contains no key
+                err = resp.json().get("error", {})
+                detail = err.get("message", "") if isinstance(err, dict) else str(err)
+            except Exception:
+                pass
             raise RuntimeError(
-                "Gemini API rate-limited (HTTP 429) — free-tier quota. Wait ~60s, or set "
-                "ODR_GEMINI_MODEL=gemini-1.5-flash in your .env and retry."
+                f"Gemini API rate-limited (HTTP 429): {detail or 'free-tier quota exceeded'}. "
+                "Try a lighter model (ODR_GEMINI_MODEL=gemini-2.0-flash-lite), wait ~60s, or "
+                "check quotas at https://aistudio.google.com."
             )
         resp.raise_for_status()
         data: Any = resp.json()
