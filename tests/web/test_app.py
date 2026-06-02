@@ -150,6 +150,10 @@ def test_console_page_renders_query_form_and_guardrail() -> None:
     # fonts are self-hosted: no runtime Google Fonts dependency
     assert "/static/fonts.css" in resp.text
     assert "fonts.googleapis.com" not in resp.text
+    # a11y: a <main> landmark, aria-current on the active nav link, live regions
+    assert "<main" in resp.text
+    assert 'aria-current="page"' in resp.text
+    assert 'role="status"' in resp.text
 
 
 def test_console_shows_corpus_readout() -> None:
