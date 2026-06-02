@@ -14,11 +14,13 @@ class _CountingGenerator:
 
     def __init__(self) -> None:
         self.calls = 0
+        self.max_tokens = 0
 
     def generate(
         self, system: str, user: str, *, max_tokens: int = 1024, temperature: float = 0.0
     ) -> str:
         self.calls += 1
+        self.max_tokens = max_tokens
         return "yes"
 
 
@@ -46,3 +48,11 @@ def test_anthropic_judge_caches_by_pair() -> None:
 def test_anthropic_judge_parses_no() -> None:
     judge = LLMJudge(generator=FakeGenerator("No — the passage does not support it."))
     assert judge.judge("claim", "passage") is False
+
+
+def test_judge_gives_reasoning_models_token_room() -> None:
+    # Reasoning models (e.g. Gemma 3n) spend tokens "thinking" before the verdict;
+    # too small a cap leaves content empty → every claim wrongly judged unsupported.
+    gen = _CountingGenerator()
+    LLMJudge(generator=gen).judge("claim", "passage")
+    assert gen.max_tokens >= 64

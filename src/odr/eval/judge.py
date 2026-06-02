@@ -50,7 +50,11 @@ class LLMJudge:
             out = self._generator.generate(
                 _SYSTEM,
                 f"CLAIM: {claim}\nPASSAGE: {passage}\nDoes the passage support the claim?",
-                max_tokens=5,
+                # Reasoning models (e.g. Gemma 3n) "think" before answering; a tiny cap
+                # leaves content empty → every claim wrongly judged unsupported. The model
+                # stops right after the verdict, so a large cap costs nothing in speed but
+                # gives headroom against run-to-run variance in the thinking length.
+                max_tokens=1024,
                 temperature=0.0,
             )
             self._cache[key] = out.strip().lower().startswith("y")
