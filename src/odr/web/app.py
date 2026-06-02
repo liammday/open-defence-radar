@@ -1,55 +1,71 @@
 """FastAPI app: the grounded query console + trust dashboard (design §7).
 
-The app is built by `create_app`, which takes an injectable `query_fn` (defaults
-to the shared `answer_query` use-case) so the routes can be tested against a fake
-answer without a live model, store, or network. The HTTP `POST /query` returns the
-same JSON contract as the MCP `query` tool (design §4 — no new backend shapes).
+`create_app` takes an injectable `query_fn` (the answer use-case) and
+`context_provider` (the corpus/eval view-model), so the routes can be tested
+against fakes without a live model, store, or network. The HTTP `POST /query`
+returns the same JSON contract as the MCP `query` tool (design §4).
 """
 
 from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from odr.eval.runner import load_thresholds
 from odr.query import answer_query, answer_to_dict, build_filters
-from odr.types import Answer, Filters
+from odr.types import Answer, Filters, SourceStat
+from odr.web.trust import TrustView, load_trust_view
 
 QueryFn = Callable[[str, int, Filters | None], Answer]
 
+_HERE = Path(__file__).resolve().parent
+_templates = Jinja2Templates(directory=str(_HERE / "templates"))
 
-def _placeholder_page(active: str, lede: str) -> str:
-    """A minimal page shell carrying the wordmark + open-sources guardrail banner.
+_EXAMPLES = (
+    "Recent MoD AI procurement awards",
+    "Tenders citing autonomy or autonomous systems",
+    "Counter-UAS or drone-defence announcements",
+)
 
-    Slice 1 stands the routes up; the prototype UI (Jinja templates) is ported in
-    the next slice (epic #5), which replaces this shell.
-    """
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>open-defence-radar — {active}</title>
-</head>
-<body>
-  <header>
-    <span class="wordmark">open-defence-radar</span>
-    <span class="guardrail">OPEN SOURCES ONLY</span>
-    <nav><a href="/">Console</a> · <a href="/trust">Trust</a></nav>
-  </header>
-  <main>
-    <h1>{active}</h1>
-    <p>{lede}</p>
-    <p>Placeholder — the prototype UI lands when the Jinja templates are ported.</p>
-  </main>
-</body>
-</html>"""
+
+@dataclass(frozen=True)
+class SiteContext:
+    """View-model shared by both pages: corpus readout + provenance + trust."""
+
+    source_count: int
+    document_count: int
+    provenance: tuple[SourceStat, ...]
+    trust: TrustView | None
+
+
+ContextProvider = Callable[[], SiteContext]
+
+
+def _default_context() -> SiteContext:
+    """Live context from the SQLite store + eval artifacts (read fresh per request)."""
+    from odr.store.sqlite_store import SqliteStore
+
+    store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"))
+    store.init_schema()  # no-op on an existing store; creates empty tables otherwise
+    provenance = tuple(store.source_breakdown())
+    eval_dir = os.environ.get("ODR_EVAL_DIR", "data/eval")
+    return SiteContext(
+        source_count=len(provenance),
+        document_count=store.document_count(),
+        provenance=provenance,
+        trust=load_trust_view(eval_dir, load_thresholds()),
+    )
 
 
 class QueryRequest(BaseModel):
@@ -62,11 +78,16 @@ class QueryRequest(BaseModel):
     sources: list[str] | None = None
 
 
-def create_app(query_fn: QueryFn = answer_query) -> FastAPI:
+def create_app(
+    query_fn: QueryFn = answer_query,
+    *,
+    context_provider: ContextProvider = _default_context,
+) -> FastAPI:
     app = FastAPI(
         title="open-defence-radar",
         description="Grounded retrieval over open defence-and-security signals.",
     )
+    app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
@@ -78,14 +99,20 @@ def create_app(query_fn: QueryFn = answer_query) -> FastAPI:
         return answer_to_dict(query_fn(req.topic, req.k, filters))
 
     @app.get("/", response_class=HTMLResponse)
-    def console() -> str:
-        return _placeholder_page(
-            "Console", "Ask a question; every claim is traced to a cited open source."
+    def console(request: Request) -> HTMLResponse:
+        return _templates.TemplateResponse(
+            request,
+            "console.html",
+            {"site": context_provider(), "active": "console", "examples": _EXAMPLES},
         )
 
     @app.get("/trust", response_class=HTMLResponse)
-    def trust() -> str:
-        return _placeholder_page("Trust", "Evaluation metrics and source provenance.")
+    def trust(request: Request) -> HTMLResponse:
+        return _templates.TemplateResponse(
+            request,
+            "trust.html",
+            {"site": context_provider(), "active": "trust"},
+        )
 
     return app
 

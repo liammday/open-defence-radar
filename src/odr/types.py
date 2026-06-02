@@ -117,3 +117,15 @@ class SourceMeta:
     licence: str
     attribution: str | None = None
     enabled: bool = True
+
+
+@dataclass(frozen=True)
+class SourceStat:
+    """Per-source corpus stats for the trust provenance table + corpus readout."""
+
+    id: str
+    name: str
+    licence: str
+    access_method: str
+    document_count: int
+    last_fetched: datetime | None = None

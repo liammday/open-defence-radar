@@ -14,13 +14,13 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import apsw
 import sqlite_vec
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
+from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta, SourceStat
 
 DEFAULT_DIM = 384  # BGE-small-en-v1.5; the local-embedder default arrives in #12.
 
@@ -206,6 +206,35 @@ class SqliteStore:
             )
         )
         return date.fromisoformat(row[0]) if row[0] else None
+
+    def source_breakdown(self) -> list[SourceStat]:
+        """Per-source document counts + last ingest time (for the trust provenance table).
+
+        `document.fetched_at` isn't populated, so last-fetched comes from the latest
+        `ingest_run.finished_at` for each source. Ordered by document count, descending.
+        """
+        rows = self._conn.execute(
+            """
+            SELECT s.id, s.name, s.licence, s.access_method,
+                   COUNT(d.id) AS doc_count,
+                   (SELECT MAX(finished_at) FROM ingest_run r WHERE r.source_id = s.id)
+            FROM source s
+            LEFT JOIN document d ON d.source_id = s.id
+            GROUP BY s.id, s.name, s.licence, s.access_method
+            ORDER BY doc_count DESC, s.name
+            """
+        )
+        return [
+            SourceStat(
+                id=sid,
+                name=name,
+                licence=licence or "",
+                access_method=access or "",
+                document_count=int(count),
+                last_fetched=datetime.fromisoformat(last) if last else None,
+            )
+            for sid, name, licence, access, count, last in rows
+        ]
 
     def upsert_chunks(
         self,
