@@ -1,18 +1,26 @@
-"""Web app: the FastAPI routes (design §7 slice 1).
+"""Web app: the FastAPI routes (design §7).
 
-The app factory takes an injectable `query_fn`, so the routes are exercised
-against a fake answer — no live model, store, or network.
+The app factory takes an injectable `query_fn` and `context_provider`, so the
+routes are exercised against fakes — no live model, store, or network.
 """
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from fastapi.testclient import TestClient
 
 from odr.query import answer_to_dict
-from odr.types import Answer, Citation, Filters, GroundednessReport, ScoredChunk
-from odr.web.app import create_app
+from odr.types import (
+    Answer,
+    Citation,
+    Filters,
+    GroundednessReport,
+    ScoredChunk,
+    SourceStat,
+)
+from odr.web.app import SiteContext, create_app
+from odr.web.trust import MetricView, TrustView
 
 
 def _sample_answer() -> Answer:
@@ -41,6 +49,33 @@ def _sample_answer() -> Answer:
             ),
         ),
     )
+
+
+def _ctx(trust: TrustView | None = None, provenance: tuple[SourceStat, ...] = ()) -> SiteContext:
+    return SiteContext(
+        source_count=len(provenance),
+        document_count=sum(s.document_count for s in provenance),
+        provenance=provenance,
+        trust=trust,
+    )
+
+
+def _sample_trust(passed: bool = True) -> TrustView:
+    metric = MetricView(
+        key="groundedness",
+        label="Groundedness",
+        value=0.95,
+        bound=0.9,
+        inverted=False,
+        passed=passed,
+        fill_class="good",
+        detail="entailment-judged",
+        history=(0.95,),
+    )
+    return TrustView(generated_at="2026-06-02T09:51:42+00:00", question_count=10, metrics=(metric,))
+
+
+# ── POST /query (the data endpoint) ─────────────────────────────────────────
 
 
 def test_query_returns_cited_answer_contract() -> None:
@@ -94,23 +129,71 @@ def test_healthz_returns_ok() -> None:
     assert resp.json() == {"status": "ok"}
 
 
-def test_console_page_renders_html() -> None:
-    client = TestClient(create_app())
+# ── GET / (console page) ─────────────────────────────────────────────────────
+
+
+def test_console_page_renders_query_form_and_guardrail() -> None:
+    client = TestClient(create_app(context_provider=_ctx))
     resp = client.get("/")
 
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
-    # Identity + the non-negotiable open-sources guardrail banner (design §2).
-    assert "open-defence-radar" in resp.text
-    assert "OPEN SOURCES ONLY" in resp.text
-    assert "Console" in resp.text
+    assert 'id="query-form"' in resp.text
+    assert "Ask the open signals" in resp.text
+    assert "open sources only" in resp.text  # the guardrail banner (CSS uppercases it)
 
 
-def test_trust_page_renders_html() -> None:
-    client = TestClient(create_app())
+def test_console_shows_corpus_readout() -> None:
+    prov = (
+        SourceStat("contracts-finder", "UK Contracts Finder", "OGL v3.0", "OCDS API", 137, None),
+    )
+    client = TestClient(create_app(context_provider=lambda: _ctx(provenance=prov)))
+    resp = client.get("/")
+
+    assert "137" in resp.text  # document count surfaced in the status bar
+    assert "documents" in resp.text
+
+
+# ── GET /trust (dashboard page) ──────────────────────────────────────────────
+
+
+def test_trust_page_renders_metrics_and_provenance() -> None:
+    prov = (
+        SourceStat(
+            "contracts-finder",
+            "UK Contracts Finder",
+            "OGL v3.0",
+            "OCDS API",
+            42,
+            datetime(2026, 5, 30, 4, 12),
+        ),
+    )
+    client = TestClient(
+        create_app(context_provider=lambda: _ctx(trust=_sample_trust(), provenance=prov))
+    )
     resp = client.get("/trust")
 
     assert resp.status_code == 200
-    assert resp.headers["content-type"].startswith("text/html")
-    assert "open-defence-radar" in resp.text
-    assert "Trust" in resp.text
+    assert "Groundedness" in resp.text
+    assert "0.95" in resp.text
+    assert "all floors met" in resp.text
+    assert "UK Contracts Finder" in resp.text
+    assert "OCDS API" in resp.text
+
+
+def test_trust_page_flags_breach() -> None:
+    client = TestClient(
+        create_app(context_provider=lambda: _ctx(trust=_sample_trust(passed=False)))
+    )
+    resp = client.get("/trust")
+
+    assert resp.status_code == 200
+    assert "all floors met" not in resp.text
+
+
+def test_trust_page_no_eval_is_graceful() -> None:
+    client = TestClient(create_app(context_provider=_ctx))
+    resp = client.get("/trust")
+
+    assert resp.status_code == 200
+    assert "No evaluation has been run" in resp.text

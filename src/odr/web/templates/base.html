@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>open-defence-radar · {% block title %}{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <div class="brand">
+      <span class="mark">open<b>·</b>defence<b>·</b>radar</span>
+      <span class="tag">open sources only</span>
+    </div>
+    <nav aria-label="Views">
+      <a class="tab" href="/" aria-selected="{{ 'true' if active == 'console' else 'false' }}"{% if active == 'console' %} aria-current="page"{% endif %}>Console</a>
+      <a class="tab" href="/trust" aria-selected="{{ 'true' if active == 'trust' else 'false' }}"{% if active == 'trust' %} aria-current="page"{% endif %}>Trust</a>
+    </nav>
+    <div class="readout">
+      <div><b>{{ site.source_count }}</b> sources &nbsp; <b>{{ "{:,}".format(site.document_count) }}</b> documents</div>
+      <div>open data · OGL v3.0 · analytic, not operational</div>
+    </div>
+  </div>
+</header>
+
+{% block main %}{% endblock %}
+
+<footer class="wrap">open-defence-radar — open sources only · analytic, not operational</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

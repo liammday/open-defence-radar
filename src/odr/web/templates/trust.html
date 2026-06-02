@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Trust{% endblock %}
+{% block main %}
+<section class="view active wrap" id="trust">
+  <p class="eyebrow">Evaluation · refreshed every commit</p>
+  <h1 class="title">Trust dashboard.</h1>
+
+  {% if site.trust %}
+  <p class="stamp">
+    <span>last eval run <b>{{ site.trust.generated_at[:16].replace("T", " ") }}Z</b></span>
+    <span>question set <b>{{ site.trust.question_count }}</b></span>
+    {% if site.trust.all_passed %}
+    <span class="status pass">● all floors met</span>
+    {% else %}
+    <span class="status warn">● floor breached</span>
+    {% endif %}
+  </p>
+
+  <div class="meters">
+    {% for m in site.trust.metrics %}
+    <div class="meter">
+      <div class="lab"><span>{{ m.label }}</span><span class="status {{ m.status }}">{{ m.status }}</span></div>
+      <div class="big">{{ m.value_display }}</div>
+      <div class="sub">{{ m.sub }}</div>
+      <div class="track">
+        <div class="fill {{ m.fill_class }}" data-to="{{ m.right_pct }}%"></div>
+        <div class="markline" data-l="{{ 'ceiling' if m.inverted else 'floor' }}" style="left:{{ m.marker_pct }}%"></div>
+      </div>
+      <div class="spark" data-vals="{{ m.spark_vals }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="lede">No evaluation has been run yet. Run <code>uv run odr eval</code> to populate this dashboard.</p>
+  {% endif %}
+
+  <p class="seclabel">Provenance · ingested sources</p>
+  {% if site.provenance %}
+  <table class="prov-table">
+    <thead><tr><th>Source</th><th>Licence</th><th>Documents</th><th>Last fetched</th><th>Access</th></tr></thead>
+    <tbody>
+      {% for s in site.provenance %}
+      <tr>
+        <td class="s">{{ s.name }}</td>
+        <td class="lic">{{ s.licence }}</td>
+        <td class="num">{{ "{:,}".format(s.document_count) }}</td>
+        <td class="num">{% if s.last_fetched %}{{ s.last_fetched.strftime("%Y-%m-%d %H:%MZ") }}{% else %}—{% endif %}</td>
+        <td class="num">{{ s.access_method }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="lede">No sources ingested yet. Run <code>uv run odr ingest contracts-finder</code> to populate the corpus.</p>
+  {% endif %}
+
+  <p class="note"><b>Controlled deployment:</b> the eval harness runs on every commit. A metric breaching its floor (or the unsupported-claim ceiling) fails CI — a release tag cannot be cut on a regression.</p>
+</section>
+{% endblock %}

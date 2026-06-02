@@ -195,6 +195,62 @@ def test_sqlite_creates_tables_and_enables_wal(tmp_path) -> None:  # type: ignor
         con.close()
 
 
+def test_source_breakdown_returns_per_source_counts_and_meta(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    store = SqliteStore(tmp_path / "odr.sqlite3")
+    store.init_schema()
+    store.upsert_source(
+        SourceMeta(
+            id="contracts-finder",
+            name="UK Contracts Finder",
+            url="https://www.contractsfinder.service.gov.uk",
+            access_method="OCDS API",
+            licence="OGL v3.0",
+        )
+    )
+    store.upsert_source(
+        SourceMeta(
+            id="govuk-mod",
+            name="GOV.UK · MoD",
+            url="https://www.gov.uk",
+            access_method="Content API",
+            licence="OGL v3.0",
+        )
+    )
+    store.upsert_document(Document("contracts-finder", "r1", "t", "u", "x", "h1", date(2026, 1, 1)))
+    store.upsert_document(Document("contracts-finder", "r2", "t", "u", "y", "h2", date(2026, 2, 1)))
+    store.upsert_document(Document("govuk-mod", "r3", "t", "u", "z", "h3", date(2026, 3, 1)))
+    store.record_ingest_run(
+        IngestRun(
+            source_id="contracts-finder",
+            started_at=datetime(2026, 5, 30, 4, 0, 0),
+            finished_at=datetime(2026, 5, 30, 4, 12, 0),
+            status="ok",
+            docs_seen=2,
+            docs_new=2,
+            docs_updated=0,
+        )
+    )
+
+    breakdown = store.source_breakdown()
+
+    assert [(b.id, b.document_count) for b in breakdown] == [
+        ("contracts-finder", 2),  # ordered by document count, descending
+        ("govuk-mod", 1),
+    ]
+    cf = breakdown[0]
+    assert cf.name == "UK Contracts Finder"
+    assert cf.licence == "OGL v3.0"
+    assert cf.access_method == "OCDS API"
+    assert cf.last_fetched == datetime(2026, 5, 30, 4, 12, 0)
+    assert breakdown[1].last_fetched is None  # no ingest run recorded for govuk-mod
+
+
+def test_source_breakdown_empty_store_is_empty_list(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    store = SqliteStore(tmp_path / "odr.sqlite3")
+    store.init_schema()
+    assert store.source_breakdown() == []
+
+
 @pytest.fixture(params=["memory", "sqlite"])
 def vec_store(request: pytest.FixtureRequest, tmp_path):  # type: ignore[no-untyped-def]
     """A store configured for 3-dimensional vectors, populated via upsert_chunks."""
