@@ -39,15 +39,16 @@ Requires Python 3.12+ and [`uv`](https://docs.astral.sh/uv/).
 # 1. install (pinned lockfile)
 uv sync
 
-# 2. configure — for synthesis you need an Anthropic API key.
+# 2. configure — synthesis uses Gemini's free tier by default.
 cp .env.example .env
-#   then set ANTHROPIC_API_KEY in .env (or export it).
+#   set GOOGLE_API_KEY (free, no card: https://aistudio.google.com/apikey).
 #   Embeddings default to a LOCAL model (no key, no cost); the ~130 MB model
 #   downloads once on first ingest and is cached.
+#   (Prefer Claude? set ODR_GENERATOR=anthropic + ANTHROPIC_API_KEY — pay-per-use.)
 
 # 3. ingest bounded slices of real open data
 #    sources: contracts-finder · find-a-tender · govuk-mod
-export ANTHROPIC_API_KEY=sk-ant-...        # or put it in .env
+export GOOGLE_API_KEY=...                   # or put it in .env
 uv run odr ingest contracts-finder --limit 50
 uv run odr ingest find-a-tender --limit 50
 uv run odr ingest govuk-mod --limit 50
@@ -85,7 +86,7 @@ Desktop / Claude Code). Add to your client's MCP config:
       "command": "uv",
       "args": ["run", "odr-mcp"],
       "cwd": "/absolute/path/to/open-defence-radar",
-      "env": { "ANTHROPIC_API_KEY": "sk-ant-...", "ODR_DB_PATH": "data/odr.sqlite3" }
+      "env": { "GOOGLE_API_KEY": "...", "ODR_DB_PATH": "data/odr.sqlite3" }
     }
   }
 }
@@ -98,10 +99,12 @@ groundedness read, and the retrieved-passage count.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | Required for synthesis (the answer step). |
+| `GOOGLE_API_KEY` | — | Required for synthesis when `ODR_GENERATOR=gemini` (the default). Free tier. |
+| `ANTHROPIC_API_KEY` | — | Required for synthesis when `ODR_GENERATOR=anthropic` (pay-per-use). |
+| `ODR_GENERATOR` | `gemini` | `gemini` (free tier) · `anthropic` (pay-per-use). |
+| `ODR_GEMINI_MODEL` | `gemini-2.0-flash` | Override the Gemini model. |
+| `ODR_ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Override the Claude model. |
 | `ODR_EMBEDDER` | `local` | `local` (offline BGE) · `fake` (tests). |
-| `ODR_GENERATOR` | `anthropic` | Generation provider. |
-| `ODR_ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Override the synthesis model. |
 | `ODR_DB_PATH` | `data/odr.sqlite3` | SQLite store location. |
 | `ODR_RERANK` | `0` | `1` enables the cross-encoder reranker (experimental; eval-gated). |
 

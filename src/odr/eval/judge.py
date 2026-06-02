@@ -39,7 +39,7 @@ _SYSTEM = (
 )
 
 
-class AnthropicJudge:
+class LLMJudge:
     def __init__(self, generator: Generator | None = None) -> None:
         self._generator = generator or get_generator()
         self._cache: dict[str, bool] = {}
