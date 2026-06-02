@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Protocol
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
+from odr.types import Chunk, Document, Filters, IngestRun, RegionStat, ScoredChunk, SourceMeta
 
 
 class Store(Protocol):
@@ -41,6 +41,10 @@ class Store(Protocol):
         ...
 
     def document_count(self) -> int: ...
+
+    def region_breakdown(self) -> list[RegionStat]:
+        """Per-ITL-1-region corpus counts for the trust choropleth (Phase 5)."""
+        ...
 
     def upsert_chunks(
         self,

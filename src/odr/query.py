@@ -25,14 +25,16 @@ def build_filters(
     date_from: str | None = None,
     date_to: str | None = None,
     sources: Sequence[str] | None = None,
+    region: str | None = None,
 ) -> Filters | None:
     """Parse interface-layer strings into Filters (or None when nothing is set)."""
-    if not (date_from or date_to or sources):
+    if not (date_from or date_to or sources or region):
         return None
     return Filters(
         date_from=date.fromisoformat(date_from) if date_from else None,
         date_to=date.fromisoformat(date_to) if date_to else None,
         sources=tuple(sources) if sources else None,
+        region=region or None,
     )
 
 

@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from odr.eval.runner import load_thresholds
 from odr.query import answer_query, answer_to_dict, build_filters
 from odr.types import Answer, Filters, SourceStat
+from odr.web.geo_view import GeoView, build_geo_view
 from odr.web.trust import TrustView, load_trust_view
 
 QueryFn = Callable[[str, int, Filters | None], Answer]
@@ -56,6 +57,7 @@ class SiteContext:
     document_count: int
     provenance: tuple[SourceStat, ...]
     trust: TrustView | None
+    geo: GeoView | None = None  # region choropleth (Phase 5); None when unavailable
 
 
 ContextProvider = Callable[[], SiteContext]
@@ -76,6 +78,7 @@ def _default_context() -> SiteContext:
         document_count=store.document_count(),
         provenance=provenance,
         trust=load_trust_view(eval_dir, load_thresholds()),
+        geo=build_geo_view(list(store.region_breakdown())),
     )
 
 
@@ -87,6 +90,7 @@ class QueryRequest(BaseModel):
     date_from: str | None = None
     date_to: str | None = None
     sources: list[str] | None = None
+    region: str | None = None
 
 
 def create_app(
@@ -106,7 +110,7 @@ def create_app(
 
     @app.post("/query")
     def query(req: QueryRequest) -> JSONResponse:
-        filters = build_filters(req.date_from, req.date_to, req.sources)
+        filters = build_filters(req.date_from, req.date_to, req.sources, req.region)
         try:
             return JSONResponse(content=answer_to_dict(query_fn(req.topic, req.k, filters)))
         except Exception as exc:

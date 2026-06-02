@@ -26,6 +26,7 @@ def query(
     date_from: str | None = None,
     date_to: str | None = None,
     sources: list[str] | None = None,
+    region: str | None = None,
 ) -> dict[str, Any]:
     """Answer a question grounded ONLY in ingested open-source defence-and-security signals.
 
@@ -40,8 +41,11 @@ def query(
         date_from: Only consider records published on/after this YYYY-MM-DD.
         date_to: Only consider records published on/before this YYYY-MM-DD.
         sources: Restrict to these source ids (e.g. ["contracts-finder"]).
+        region: Restrict to a UK ITL-1 region (name or code, e.g. "South East").
     """
-    return answer_to_dict(answer_query(topic, k, build_filters(date_from, date_to, sources)))
+    return answer_to_dict(
+        answer_query(topic, k, build_filters(date_from, date_to, sources, region))
+    )
 
 
 def main() -> None:

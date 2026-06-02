@@ -22,6 +22,7 @@ class Document:
     content_hash: str  # for dedupe
     published_at: date | None = None
     raw: dict | None = None  # the original payload, kept for provenance/debug
+    region_code: str | None = None  # UK ITL-1 code (delivery region), or None
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ class Filters:
     date_from: date | None = None
     date_to: date | None = None
     sources: tuple[str, ...] | None = None
+    region: str | None = None  # UK ITL-1 code or name (Phase 5); normalised on use
 
 
 @dataclass(frozen=True)
@@ -128,6 +130,15 @@ class SourceMeta:
     licence: str
     attribution: str | None = None
     enabled: bool = True
+
+
+@dataclass(frozen=True)
+class RegionStat:
+    """Per-region corpus count for the trust choropleth. code=None → unspecified."""
+
+    code: str | None
+    name: str
+    document_count: int
 
 
 @dataclass(frozen=True)

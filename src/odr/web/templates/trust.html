@@ -55,6 +55,32 @@
   <p class="lede">No sources ingested yet. Run <code>uv run odr ingest contracts-finder</code> to populate the corpus.</p>
   {% endif %}
 
+  {% if site.geo and site.geo.has_data %}
+  <p class="seclabel">Geography · delivery region of procurement notices</p>
+  <div class="geo">
+    <svg class="tilemap" viewBox="0 0 288 360" aria-hidden="true" focusable="false">
+      {% for c in site.geo.cells %}
+      <g transform="translate({{ c.col * 72 }},{{ c.row * 72 }})">
+        <title>{{ c.name }}: {{ c.count }}</title>
+        <rect width="64" height="64" rx="6" class="tile" fill-opacity="{{ (0.08 + 0.9 * c.intensity)|round(3) }}"/>
+        <text x="32" y="28" class="tabbr {{ 'on' if c.intensity > 0.55 else '' }}">{{ c.abbr }}</text>
+        {% if c.count %}<text x="32" y="47" class="tnum {{ 'on' if c.intensity > 0.55 else '' }}">{{ c.count }}</text>{% endif %}
+      </g>
+      {% endfor %}
+    </svg>
+    <table class="geo-table">
+      <caption>Notices by UK ITL-1 delivery region. Region-level only; news items carry no region.</caption>
+      <thead><tr><th>Region</th><th>Notices</th></tr></thead>
+      <tbody>
+        {% for c in site.geo.cells|sort(attribute="count", reverse=true) %}
+        <tr><td class="s">{{ c.name }}</td><td class="num">{{ c.count }}</td></tr>
+        {% endfor %}
+        <tr class="unspec"><td class="s">Region not specified</td><td class="num">{{ site.geo.unspecified }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
   <p class="note"><b>Controlled deployment:</b> the eval harness runs on every commit. A metric breaching its floor (or the unsupported-claim ceiling) fails CI — a release tag cannot be cut on a regression.</p>
 </section>
 {% endblock %}

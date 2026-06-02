@@ -89,9 +89,12 @@ def query(
     date_from: str | None = typer.Option(None, "--date-from", help="Only on/after YYYY-MM-DD"),
     date_to: str | None = typer.Option(None, "--date-to", help="Only on/before YYYY-MM-DD"),
     source: list[str] | None = typer.Option(None, "--source", help="Restrict to source id(s)"),
+    region: str | None = typer.Option(
+        None, "--region", help="Restrict to a UK ITL-1 region (name or code, e.g. 'South East')"
+    ),
 ) -> None:
     """Ask a grounded, cited question over the ingested corpus."""
-    answer = answer_query(topic, k=k, filters=build_filters(date_from, date_to, source))
+    answer = answer_query(topic, k=k, filters=build_filters(date_from, date_to, source, region))
 
     typer.echo(answer.text)
     if answer.citations:
@@ -132,6 +135,27 @@ def agent(
     typer.echo(
         f"\nGroundedness: {g.supported}/{g.total_claims} claims supported (score {g.score:.2f})"
     )
+
+
+geo_app = typer.Typer(help="Geospatial maintenance (region-level, analytic only).")
+app.add_typer(geo_app, name="geo")
+
+
+@geo_app.command("backfill")
+def geo_backfill() -> None:
+    """Re-derive ITL-1 region_code for stored OCDS docs from their retained raw payload."""
+    import json
+
+    from odr.sources.ocds import delivery_region_code
+
+    store = SqliteStore(os.environ.get("ODR_DB_PATH", "data/odr.sqlite3"))
+    store.init_schema()
+
+    def derive(raw_json: str | None) -> str | None:
+        return delivery_region_code(json.loads(raw_json)) if raw_json else None
+
+    updated = store.backfill_region_codes(derive)
+    typer.echo(f"backfilled region_code on {updated} documents")
 
 
 @app.command(name="eval")
