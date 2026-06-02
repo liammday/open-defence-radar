@@ -13,10 +13,13 @@ tool (plus a CLI and a web console).
 
 ## Status
 
-**Phase 2 (`v0.3.0`) — evaluation harness.** Three open sources, hybrid retrieval,
-and filters (Phase 1), now with an **evaluation harness** that scores retrieval
-hit-rate, groundedness (entailment), and unsupported-claim rate against a fixed
-question set — wired into CI as a release gate (`odr eval`). See the
+**Phase 3 (`v0.4.0`) — web console + trust dashboard.** Everything from Phases 0–2
+(three open sources, hybrid retrieval + filters, and the CI-gated evaluation
+harness), now with a **FastAPI web console** — ask a question, get a grounded brief
+where every claim expands into a provenance card — and a **trust dashboard** that
+shows the eval metrics against their floors plus live source provenance. Fonts are
+self-hosted, it ships as a container, and an opt-in Playwright smoke guards the UI
+in CI. See the
 [milestones](https://github.com/liammday/open-defence-radar/milestones) and
 [releases](https://github.com/liammday/open-defence-radar/releases).
 
@@ -28,7 +31,7 @@ Open sources: UK Contracts Finder · Find a Tender · GOV.UK/MoD news (all OGL v
   → store: one SQLite file (apsw + sqlite-vec vectors + FTS5 keyword index)
   → retrieve: hybrid — semantic (vector) + keyword (BM25), fused with RRF, + filters
   → synthesise: Claude answers ONLY from retrieved passages, every claim cited
-  → surfaces: `odr query` CLI · MCP `query` tool
+  → surfaces: `odr query` CLI · MCP `query` tool · `odr-web` console + trust dashboard
 ```
 
 ## Quick start
