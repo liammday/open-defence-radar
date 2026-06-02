@@ -59,3 +59,15 @@ def test_load_trust_view_flags_unsupported_breach(tmp_path: Path) -> None:
     assert view is not None
     assert {m.key: m.passed for m in view.metrics}["unsupported_claim_rate"] is False
     assert view.all_passed is False
+
+
+def test_metrics_carry_plain_english_explanations(tmp_path: Path) -> None:
+    _write_latest(tmp_path)
+    view = load_trust_view(tmp_path, _THRESHOLDS)
+    assert view is not None
+    # every gauge carries a non-empty, observer-friendly caption
+    for m in view.metrics:
+        assert m.explanation.strip()
+    by_key = {m.key: m for m in view.metrics}
+    assert "retriev" in by_key["hit_rate"].explanation.lower()
+    assert "support" in by_key["groundedness"].explanation.lower()

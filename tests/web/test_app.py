@@ -70,6 +70,7 @@ def _sample_trust(passed: bool = True) -> TrustView:
         passed=passed,
         fill_class="good",
         detail="entailment-judged",
+        explanation="How often the answer's claims are supported by a retrieved passage.",
         history=(0.95,),
     )
     return TrustView(generated_at="2026-06-02T09:51:42+00:00", question_count=10, metrics=(metric,))
@@ -141,6 +142,9 @@ def test_console_page_renders_query_form_and_guardrail() -> None:
     assert 'id="query-form"' in resp.text
     assert "Ask the open signals" in resp.text
     assert "open sources only" in resp.text  # the guardrail banner (CSS uppercases it)
+    assert 'class="inputbox"' in resp.text  # the bordered, obviously-editable input
+    assert "pick an example" in resp.text  # the affordance hint
+    assert 'id="loading"' in resp.text  # the in-flight progress block
 
 
 def test_console_shows_corpus_readout() -> None:
@@ -177,6 +181,7 @@ def test_trust_page_renders_metrics_and_provenance() -> None:
     assert "Groundedness" in resp.text
     assert "0.95" in resp.text
     assert "all floors met" in resp.text
+    assert "supported by a retrieved passage" in resp.text  # plain-English caption
     assert "UK Contracts Finder" in resp.text
     assert "OCDS API" in resp.text
 

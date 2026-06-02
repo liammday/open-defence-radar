@@ -71,12 +71,15 @@ h1.title{font-family:var(--display); font-weight:400; font-size:clamp(34px,5vw,5
 /* ── query block ──────────────────────────────────────── */
 .query{border:1px solid var(--hair-bright); border-radius:6px; background:linear-gradient(180deg,var(--bg-panel),rgba(15,19,24,.4)); padding:22px 22px 18px; margin-bottom:14px}
 .query label{display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:10px}
-.field{display:flex; align-items:center; gap:14px}
+.field{display:flex; align-items:stretch; gap:12px}
+.inputbox{flex:1; display:flex; align-items:center; gap:12px; border:1px solid var(--hair-bright); border-radius:5px; padding:11px 16px; background:rgba(15,19,24,.55); cursor:text; transition:border-color .2s, box-shadow .2s}
+.inputbox:focus-within{border-color:var(--signal); box-shadow:0 0 0 3px var(--signal-glow)}
 .field .caret{color:var(--signal); font-family:var(--mono); font-size:20px}
-.field input{flex:1; background:none; border:none; color:var(--ink); font-family:var(--serif); font-size:22px; padding:4px 0}
+.field input{flex:1; background:none; border:none; color:var(--ink); font-family:var(--serif); font-size:21px; padding:2px 0}
 .field input::placeholder{color:var(--ink-faint)}
 .field input:focus{outline:none}
-.field button{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--bg); background:var(--signal); border:none; border-radius:3px; padding:11px 18px; cursor:pointer; box-shadow:0 0 0 0 var(--signal-glow); transition:box-shadow .25s}
+.field button{display:inline-flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--bg); background:var(--signal); border:none; border-radius:3px; padding:11px 22px; cursor:pointer; box-shadow:0 0 0 0 var(--signal-glow); transition:box-shadow .25s}
+.qhint{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.04em; margin:11px 0 0}
 .field button:hover{box-shadow:0 0 0 5px var(--signal-glow)}
 .field button:disabled{opacity:.6; cursor:progress}
 .field input:focus, .tab:focus-visible{outline-offset:3px}
@@ -89,11 +92,25 @@ h1.title{font-family:var(--display); font-weight:400; font-size:clamp(34px,5vw,5
 .status-msg{font-family:var(--mono); font-size:13px; color:var(--ink-dim); border:1px solid var(--hair-bright); border-left:2px solid var(--ink-dim); border-radius:4px; padding:14px 16px; margin-top:24px}
 .status-msg.error{border-left-color:var(--bad); color:var(--ink)}
 
+/* ── in-flight retrieval (loading) ────────────────────── */
+.loading{margin-top:30px; border:1px solid var(--hair); border-radius:6px; background:var(--bg-panel); padding:26px 28px}
+.loading-line{font-family:var(--mono); font-size:12.5px; color:var(--ink-dim); margin:0; display:flex; align-items:center}
+.loading-line b{color:var(--signal); font-weight:500; margin-left:6px; font-variant-numeric:tabular-nums}
+.spinner{display:inline-block; width:14px; height:14px; margin-right:11px; border:2px solid var(--hair-bright); border-top-color:var(--signal); border-radius:50%; animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skeleton{margin-top:20px; display:flex; flex-direction:column; gap:11px}
+.skeleton i{height:12px; border-radius:3px; background:linear-gradient(90deg,var(--bg-raise) 25%,rgba(233,231,223,.07) 37%,var(--bg-raise) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite}
+.skeleton i:nth-child(1){width:94%} .skeleton i:nth-child(2){width:80%}
+.skeleton i:nth-child(3){width:88%} .skeleton i:nth-child(4){width:58%}
+@keyframes shimmer{to{background-position:-100% 0}}
+
 /* ── results grid ─────────────────────────────────────── */
-.results{display:grid; grid-template-columns:1.65fr 1fr; gap:0; margin-top:30px; border:1px solid var(--hair); border-radius:6px; overflow:hidden}
-.brief{padding:30px 34px 34px; border-right:1px solid var(--hair)}
-.rail{padding:26px 24px; background:var(--bg-panel)}
-@media(max-width:860px){.results{grid-template-columns:1fr}.brief{border-right:none;border-bottom:1px solid var(--hair)}}
+/* note: NO overflow:hidden here — it would clip the provenance popovers. Corners
+   are re-rounded on the children instead. */
+.results{display:grid; grid-template-columns:1.65fr 1fr; gap:0; margin-top:30px; border:1px solid var(--hair); border-radius:6px}
+.brief{padding:30px 34px 34px; border-right:1px solid var(--hair); border-radius:6px 0 0 6px}
+.rail{padding:26px 24px; background:var(--bg-panel); border-radius:0 6px 6px 0}
+@media(max-width:860px){.results{grid-template-columns:1fr}.brief{border-right:none;border-bottom:1px solid var(--hair);border-radius:6px 6px 0 0}.rail{border-radius:0 0 6px 6px}}
 .seclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; display:flex; align-items:center; gap:10px}
 .seclabel::after{content:""; flex:1; height:1px; background:var(--hair)}
 .answer{font-size:18.5px; line-height:1.72}
@@ -102,11 +119,11 @@ h1.title{font-family:var(--display); font-weight:400; font-size:clamp(34px,5vw,5
 .cite{font-family:var(--mono); font-size:11px; color:var(--signal); border:1px solid rgba(63,216,196,.4); border-radius:3px; padding:0 4px; margin:0 1px; cursor:pointer; vertical-align:.12em; position:relative; white-space:nowrap}
 .cite:hover, .cite:focus-visible{background:var(--signal); color:var(--bg); outline:none}
 /* provenance popover */
-.prov{position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%) translateY(4px); width:300px; background:var(--bg-raise); border:1px solid var(--hair-bright); border-radius:5px; padding:14px 15px; box-shadow:0 18px 40px rgba(0,0,0,.6); opacity:0; visibility:hidden; transition:opacity .2s, transform .2s; z-index:9; text-align:left}
-.cite:hover .prov, .cite:focus-within .prov, .cite.open .prov{opacity:1; visibility:visible; transform:translateX(-50%)}
-.prov::after{content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--hair-bright)}
+.prov{position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(calc(-50% + var(--shift,0px))) translateY(4px); width:300px; max-width:min(320px,calc(100vw - 24px)); background:var(--bg-raise); border:1px solid var(--hair-bright); border-radius:5px; padding:14px 15px; box-shadow:0 18px 40px rgba(0,0,0,.6); opacity:0; visibility:hidden; transition:opacity .2s, transform .2s; z-index:9; text-align:left}
+.cite:hover .prov, .cite:focus-within .prov, .cite.open .prov{opacity:1; visibility:visible; transform:translateX(calc(-50% + var(--shift,0px)))}
+.prov::after{content:""; position:absolute; top:100%; left:calc(50% - var(--shift,0px)); transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--hair-bright)}
 .prov .src{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ochre)}
-.prov h4{font-family:var(--serif); font-weight:500; font-size:15px; margin:5px 0 8px; line-height:1.35; color:var(--ink)}
+.prov h4{font-family:var(--serif); font-weight:500; font-size:15px; margin:5px 0 8px; line-height:1.35; color:var(--ink); overflow-wrap:anywhere}
 .prov dl{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; margin:0; font-family:var(--mono); font-size:11px}
 .prov dt{color:var(--ink-faint)} .prov dd{margin:0; color:var(--ink-dim)}
 .prov a{color:var(--signal); text-decoration:none; word-break:break-all}
@@ -126,6 +143,7 @@ h1.title{font-family:var(--display); font-weight:400; font-size:clamp(34px,5vw,5
 .gauge .lab{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim)}
 .gauge .val{font-family:var(--mono); font-size:30px; font-weight:600; line-height:1; color:var(--ink)}
 .gauge .val .frac{font-size:13px; color:var(--ink-faint)}
+.gauge-note{font-family:var(--mono); font-size:10.5px; line-height:1.55; color:var(--ink-faint); margin:11px 0 0}
 .track{position:relative; height:9px; border-radius:5px; background:var(--bg-raise); border:1px solid var(--hair); overflow:hidden}
 .fill{position:absolute; inset:0 100% 0 0; border-radius:5px; transition:right 1.1s cubic-bezier(.22,1,.36,1)}
 .fill.good{background:linear-gradient(90deg,rgba(116,207,134,.5),var(--good))}
@@ -153,6 +171,7 @@ h1.title{font-family:var(--display); font-weight:400; font-size:clamp(34px,5vw,5
 .spark{display:flex; align-items:flex-end; gap:3px; height:34px; margin-top:14px}
 .spark i{flex:1; background:var(--hair-bright); border-radius:1px; min-height:3px; transition:height .8s ease}
 .spark i.last{background:var(--signal)}
+.meter .explain{font-family:var(--serif); font-size:13px; line-height:1.5; color:var(--ink-dim); margin:16px 0 0; padding-top:14px; border-top:1px solid var(--hair)}
 table.prov-table{width:100%; border-collapse:collapse; font-size:14px; margin-top:6px}
 table.prov-table th{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); text-align:left; padding:10px 14px; border-bottom:1px solid var(--hair-bright); font-weight:400}
 table.prov-table td{padding:13px 14px; border-bottom:1px solid var(--hair); color:var(--ink-dim)}

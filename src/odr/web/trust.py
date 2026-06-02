@@ -12,11 +12,35 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-# (json key, display label, sub-detail, inverted?, gauge fill class)
-_METRICS: tuple[tuple[str, str, str, bool, str], ...] = (
-    ("hit_rate", "Retrieval hit-rate", "recall@k", False, "signal"),
-    ("groundedness", "Groundedness", "entailment-judged", False, "good"),
-    ("unsupported_claim_rate", "Unsupported-claim", "lower is better", True, "good"),
+# (json key, display label, sub-detail, inverted?, gauge fill class, plain-English caption)
+_METRICS: tuple[tuple[str, str, str, bool, str, str], ...] = (
+    (
+        "hit_rate",
+        "Retrieval hit-rate",
+        "recall@k",
+        False,
+        "signal",
+        "Of the evaluation questions, how often the right source was "
+        "retrieved into the top results.",
+    ),
+    (
+        "groundedness",
+        "Groundedness",
+        "entailment-judged",
+        False,
+        "good",
+        "How often the answer's claims are supported by a retrieved passage, "
+        "checked independently.",
+    ),
+    (
+        "unsupported_claim_rate",
+        "Unsupported-claim",
+        "lower is better",
+        True,
+        "good",
+        "Share of claims with no supporting passage — the inverse of "
+        "groundedness; lower is better.",
+    ),
 )
 
 
@@ -32,6 +56,7 @@ class MetricView:
     passed: bool
     fill_class: str  # "signal" | "good"
     detail: str
+    explanation: str  # plain-English caption for observers
     history: tuple[float, ...]
 
     @property
@@ -91,7 +116,7 @@ def load_trust_view(eval_dir: Path | str, thresholds: dict[str, float]) -> Trust
     history = _load_history(eval_dir)
 
     metrics: list[MetricView] = []
-    for key, label, detail, inverted, fill_class in _METRICS:
+    for key, label, detail, inverted, fill_class, explanation in _METRICS:
         value = float(data[key])
         bound = float(thresholds[key])
         passed = value <= bound if inverted else value >= bound
@@ -106,6 +131,7 @@ def load_trust_view(eval_dir: Path | str, thresholds: dict[str, float]) -> Trust
                 passed=passed,
                 fill_class=fill_class,
                 detail=detail,
+                explanation=explanation,
                 history=series,
             )
         )
