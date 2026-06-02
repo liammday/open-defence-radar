@@ -41,6 +41,19 @@ class _BoomGenerator:
         raise AssertionError("generator must not be called when there are no passages")
 
 
+class _RecordingGenerator:
+    model_id = "recording"
+
+    def __init__(self) -> None:
+        self.max_tokens = 0
+
+    def generate(
+        self, system: str, user: str, *, max_tokens: int = 1024, temperature: float = 0.0
+    ) -> str:
+        self.max_tokens = max_tokens
+        return "An answer [1]."
+
+
 def test_generators_conform_to_protocol() -> None:
     _requires_generator(FakeGenerator("x"))
     _requires_generator(AnthropicGenerator())  # cheap: client/SDK load lazily, no key needed
@@ -87,3 +100,11 @@ def test_hallucinated_citation_is_not_resolved() -> None:
     assert answer.citations == ()  # [5] resolves to no real passage
     assert answer.groundedness.supported == 0
     assert answer.groundedness.unsupported == 1
+
+
+def test_synthesiser_gives_reasoning_models_token_room() -> None:
+    # Reasoning models "think" before answering; without ample budget the cited
+    # answer truncates mid-sentence (and may drop its [n] markers).
+    gen = _RecordingGenerator()
+    Synthesiser(gen).answer("q", [_passage("c1", "Doc", "fact")])
+    assert gen.max_tokens >= 2048

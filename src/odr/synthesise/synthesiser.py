@@ -35,7 +35,10 @@ class Synthesiser:
                 groundedness=GroundednessReport(0, 0, 0),
                 retrieved=(),
             )
-        text = self._generator.generate(_SYSTEM, self._build_prompt(query, passages)).strip()
+        # Ample budget: reasoning models spend tokens thinking before the cited answer.
+        text = self._generator.generate(
+            _SYSTEM, self._build_prompt(query, passages), max_tokens=2048
+        ).strip()
         return Answer(
             text=text,
             citations=tuple(self._citations(text, passages)),
