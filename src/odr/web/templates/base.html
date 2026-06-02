@@ -15,8 +15,8 @@
       <span class="tag">open sources only</span>
     </div>
     <nav aria-label="Views">
-      <a class="tab" href="/" aria-selected="{{ 'true' if active == 'console' else 'false' }}"{% if active == 'console' %} aria-current="page"{% endif %}>Console</a>
-      <a class="tab" href="/trust" aria-selected="{{ 'true' if active == 'trust' else 'false' }}"{% if active == 'trust' %} aria-current="page"{% endif %}>Trust</a>
+      <a class="tab" href="/"{% if active == 'console' %} aria-current="page"{% endif %}>Console</a>
+      <a class="tab" href="/trust"{% if active == 'trust' %} aria-current="page"{% endif %}>Trust</a>
     </nav>
     <div class="readout">
       <div><b>{{ site.source_count }}</b> sources &nbsp; <b>{{ "{:,}".format(site.document_count) }}</b> documents</div>
@@ -25,7 +25,9 @@
   </div>
 </header>
 
+<main id="main">
 {% block main %}{% endblock %}
+</main>
 
 <footer class="wrap">open-defence-radar — open sources only · analytic, not operational</footer>
 <script src="/static/app.js"></script>

@@ -34,3 +34,26 @@ jobs:
 
       - name: Pytest
         run: uv run pytest -q
+
+  e2e:
+    name: e2e (playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv + Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen
+
+      - name: Install Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: Pytest (e2e browser smoke)
+        env:
+          ODR_E2E: "1"
+        run: uv run pytest tests/web/test_e2e.py -q

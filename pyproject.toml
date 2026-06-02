@@ -31,6 +31,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8.0",
+    "pytest-playwright>=0.5",  # e2e smoke (opt-in: ODR_E2E=1 + `playwright install chromium`)
 ]
 
 [build-system]
@@ -75,4 +76,7 @@ testpaths = ["tests"]
 # (StarletteDeprecationWarning subclasses UserWarning, not DeprecationWarning.)
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
+    # uvicorn[standard] still imports the legacy websockets API (e2e server only).
+    "ignore::DeprecationWarning:websockets",
+    "ignore::DeprecationWarning:uvicorn.protocols.websockets.websockets_impl",
 ]
