@@ -88,11 +88,14 @@ function setStatus(msg, isError) {
   el.textContent = msg;
 }
 
-// inline formatting for one line: **bold**, then [n] → citation chips
+// inline formatting for one line: **bold**, then [n] (or grouped [2, 3, 4]) → chips
 function inlineFmt(line, byMarker) {
   return line
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[(\d+)\]/g, (m, n) => { const c = byMarker["[" + n + "]"]; return c ? citeChip(c, n) : m; });
+    .replace(/\[[\d,\s]+\]/g, (m) => {
+      const nums = m.match(/\d+/g) || [];
+      return nums.map((n) => { const c = byMarker["[" + n + "]"]; return c ? citeChip(c, n) : "[" + n + "]"; }).join("");
+    });
 }
 
 // minimal markdown → HTML for the grounded brief (paragraphs + bullet lists).

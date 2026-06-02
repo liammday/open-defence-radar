@@ -120,13 +120,13 @@ h1.title{font-family:var(--display); font-weight:400; font-size:clamp(34px,5vw,5
 .cite{font-family:var(--mono); font-size:11px; color:var(--signal); border:1px solid rgba(63,216,196,.4); border-radius:3px; padding:0 4px; margin:0 1px; cursor:pointer; vertical-align:.12em; position:relative; white-space:nowrap}
 .cite:hover, .cite:focus-visible{background:var(--signal); color:var(--bg); outline:none}
 /* provenance popover */
-.prov{position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(calc(-50% + var(--shift,0px))) translateY(4px); width:300px; max-width:min(320px,calc(100vw - 24px)); background:var(--bg-raise); border:1px solid var(--hair-bright); border-radius:5px; padding:14px 15px; box-shadow:0 18px 40px rgba(0,0,0,.6); opacity:0; visibility:hidden; transition:opacity .2s, transform .2s; z-index:9; text-align:left}
+.prov{position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(calc(-50% + var(--shift,0px))) translateY(4px); width:300px; max-width:min(320px,calc(100vw - 24px)); background:var(--bg-raise); border:1px solid var(--hair-bright); border-radius:5px; padding:14px 15px; box-shadow:0 18px 40px rgba(0,0,0,.6); opacity:0; visibility:hidden; transition:opacity .2s, transform .2s; z-index:9; text-align:left; white-space:normal}
 .cite:hover .prov, .cite:focus-within .prov, .cite.open .prov{opacity:1; visibility:visible; transform:translateX(calc(-50% + var(--shift,0px)))}
 .prov::after{content:""; position:absolute; top:100%; left:calc(50% - var(--shift,0px)); transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--hair-bright)}
 .prov .src{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ochre)}
 .prov h4{font-family:var(--serif); font-weight:500; font-size:15px; margin:5px 0 8px; line-height:1.35; color:var(--ink); overflow-wrap:anywhere}
 .prov dl{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; margin:0; font-family:var(--mono); font-size:11px}
-.prov dt{color:var(--ink-faint)} .prov dd{margin:0; color:var(--ink-dim)}
+.prov dt{color:var(--ink-faint)} .prov dd{margin:0; min-width:0; color:var(--ink-dim); overflow-wrap:anywhere}
 .prov a{color:var(--signal); text-decoration:none; word-break:break-all}
 
 /* sources list */

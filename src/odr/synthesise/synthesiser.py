@@ -19,8 +19,13 @@ _SYSTEM = (
     "[1] or [2]. If the passages do not support an answer, say so plainly. Do not use "
     "outside knowledge. Be concise."
 )
-_MARKER = re.compile(r"\[(\d+)\]")
+# Markers may be single ("[1]") or grouped ("[2, 3, 4]"); extract every number.
+_MARKER_GROUP = re.compile(r"\[([\d,\s]+)\]")
 _NO_PASSAGES = "No grounded passages matched this query."
+
+
+def _marker_numbers(text: str) -> list[int]:
+    return [int(n) for group in _MARKER_GROUP.findall(text) for n in re.findall(r"\d+", group)]
 
 
 class Synthesiser:
@@ -53,13 +58,16 @@ class Synthesiser:
             published = p.published_at.isoformat() if p.published_at else None
             meta = " · ".join(part for part in (p.source_name, published, p.title) if part)
             lines.append(f"[{i}] ({meta})\n{p.text}")
-        lines += ["", "Answer the question, citing supporting passages with [n]."]
+        lines += [
+            "",
+            "Answer the question, citing each supporting passage with its own marker, e.g. [1][2].",
+        ]
         return "\n".join(lines)
 
     @staticmethod
     def _citations(text: str, passages: list[ScoredChunk]) -> list[Citation]:
         out: list[Citation] = []
-        for n in sorted({int(m) for m in _MARKER.findall(text)}):
+        for n in sorted(set(_marker_numbers(text))):
             if 1 <= n <= len(passages):
                 p = passages[n - 1]
                 out.append(
@@ -78,9 +86,7 @@ class Synthesiser:
     def _groundedness(text: str, n_passages: int) -> GroundednessReport:
         sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
         claims = [s for s in sentences if any(ch.isalpha() for ch in s)]
-        supported = sum(
-            1 for s in claims if any(1 <= int(m) <= n_passages for m in _MARKER.findall(s))
-        )
+        supported = sum(1 for s in claims if any(1 <= n <= n_passages for n in _marker_numbers(s)))
         return GroundednessReport(
             total_claims=len(claims), supported=supported, unsupported=len(claims) - supported
         )
