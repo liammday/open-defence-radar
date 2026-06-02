@@ -20,7 +20,16 @@ from pathlib import Path
 import apsw
 import sqlite_vec
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta, SourceStat
+from odr.types import (
+    Chunk,
+    Document,
+    Filters,
+    IngestRun,
+    RegionStat,
+    ScoredChunk,
+    SourceMeta,
+    SourceStat,
+)
 
 DEFAULT_DIM = 384  # BGE-small-en-v1.5; the local-embedder default arrives in #12.
 
@@ -46,6 +55,7 @@ CREATE TABLE IF NOT EXISTS document (
     content_hash TEXT NOT NULL,
     text         TEXT NOT NULL,
     raw          TEXT,
+    region_code  TEXT,
     UNIQUE (source_id, source_ref)
 );
 CREATE INDEX IF NOT EXISTS idx_document_content_hash ON document (content_hash);
@@ -102,6 +112,12 @@ class SqliteStore:
 
     def init_schema(self) -> None:
         self._conn.execute(_RELATIONAL_SCHEMA)
+        # Additive migration: pre-Phase-5 stores predate the region_code column.
+        # Add it (and its index) before anything reads/indexes it.
+        self._ensure_column("document", "region_code", "TEXT")
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_document_region ON document (region_code)"
+        )
         self._conn.execute(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS chunk_vec "
             f"USING vec0(chunk_id TEXT PRIMARY KEY, embedding float[{self.dim}])"
@@ -109,6 +125,12 @@ class SqliteStore:
         self._conn.execute(
             "CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(chunk_id UNINDEXED, text)"
         )
+
+    def _ensure_column(self, table: str, column: str, decl: str) -> None:
+        """Add `column` to `table` if absent — an idempotent additive migration."""
+        cols = {r[1] for r in self._conn.execute(f"PRAGMA table_info({table})")}
+        if column not in cols:
+            self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
     def upsert_source(self, meta: SourceMeta) -> None:
         with self._conn:
@@ -159,11 +181,13 @@ class SqliteStore:
             self._conn.execute(
                 """
                 INSERT INTO document
-                    (id, source_id, source_ref, title, url, published_at, content_hash, text, raw)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, source_id, source_ref, title, url, published_at, content_hash,
+                     text, raw, region_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (source_id, source_ref) DO UPDATE SET
                     title=excluded.title, url=excluded.url, published_at=excluded.published_at,
-                    content_hash=excluded.content_hash, text=excluded.text, raw=excluded.raw
+                    content_hash=excluded.content_hash, text=excluded.text, raw=excluded.raw,
+                    region_code=excluded.region_code
                 """,
                 (
                     doc_id,
@@ -175,6 +199,7 @@ class SqliteStore:
                     doc.content_hash,
                     doc.text,
                     json.dumps(doc.raw) if doc.raw is not None else None,
+                    doc.region_code,
                 ),
             )
         return doc_id
@@ -339,7 +364,35 @@ class SqliteStore:
             placeholders = ", ".join("?" for _ in filters.sources)
             clauses.append(f"d.source_id IN ({placeholders})")
             params.extend(filters.sources)
+        if filters.region is not None:
+            from odr.geo import classify
+
+            resolved = classify(filters.region)
+            clauses.append("d.region_code = ?")
+            params.append(resolved.code if resolved is not None else filters.region)
         return (" AND " + " AND ".join(clauses), params) if clauses else ("", [])
+
+    def region_breakdown(self) -> list[RegionStat]:
+        """Per-ITL-1-region corpus counts for the trust choropleth.
+
+        Every region appears (count 0 if absent); documents with no resolvable
+        delivery region are appended as a single ``code=None`` "unspecified" row.
+        """
+        from odr.geo import REGIONS
+
+        rows = self._conn.execute(
+            "SELECT region_code, COUNT(*) FROM document GROUP BY region_code"
+        )
+        counts = {code: int(n) for code, n in rows}
+        stats = [
+            RegionStat(code=r.code, name=r.name, document_count=counts.get(r.code, 0))
+            for r in REGIONS
+        ]
+        if counts.get(None):
+            stats.append(
+                RegionStat(code=None, name="Region not specified", document_count=counts[None])
+            )
+        return stats
 
     def semantic_search(
         self, query_vec: list[float], k: int, filters: Filters | None = None

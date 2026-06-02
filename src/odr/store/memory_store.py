@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from odr.types import Chunk, Document, Filters, IngestRun, ScoredChunk, SourceMeta
+from odr.types import Chunk, Document, Filters, IngestRun, RegionStat, ScoredChunk, SourceMeta
 
 
 def _passes(doc: Document | None, filters: Filters | None) -> bool:
@@ -26,7 +26,16 @@ def _passes(doc: Document | None, filters: Filters | None) -> bool:
         doc.published_at is None or doc.published_at > filters.date_to
     ):
         return False
-    return not (filters.sources and doc.source_id not in filters.sources)
+    if filters.sources and doc.source_id not in filters.sources:
+        return False
+    if filters.region is not None:
+        from odr.geo import classify
+
+        resolved = classify(filters.region)
+        code = resolved.code if resolved is not None else filters.region
+        if doc.region_code != code:
+            return False
+    return True
 
 
 class InMemoryStore:
@@ -59,6 +68,22 @@ class InMemoryStore:
 
     def document_count(self) -> int:
         return len(self._documents)
+
+    def region_breakdown(self) -> list[RegionStat]:
+        from odr.geo import REGIONS
+
+        counts: dict[str | None, int] = {}
+        for doc in self._documents.values():
+            counts[doc.region_code] = counts.get(doc.region_code, 0) + 1
+        stats = [
+            RegionStat(code=r.code, name=r.name, document_count=counts.get(r.code, 0))
+            for r in REGIONS
+        ]
+        if counts.get(None):
+            stats.append(
+                RegionStat(code=None, name="Region not specified", document_count=counts[None])
+            )
+        return stats
 
     def latest_published(self, source_id: str) -> date | None:
         dates = [
