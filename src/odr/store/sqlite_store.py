@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from datetime import date, datetime
 from pathlib import Path
 
@@ -203,6 +204,25 @@ class SqliteStore:
                 ),
             )
         return doc_id
+
+    def backfill_region_codes(self, derive: Callable[[str | None], str | None]) -> int:
+        """Re-derive region_code for every stored document from its retained raw.
+
+        `derive` maps a document's stored raw JSON (or None) to an ITL-1 code (or
+        None). Used by `odr geo backfill` so a pre-Phase-5 corpus gains regions
+        without re-fetching. Returns the number of rows whose code changed.
+        """
+        rows = list(self._conn.execute("SELECT id, raw, region_code FROM document"))
+        changed = 0
+        with self._conn:
+            for doc_id, raw, current in rows:
+                new = derive(raw)
+                if new != current:
+                    self._conn.execute(
+                        "UPDATE document SET region_code = ? WHERE id = ?", (new, doc_id)
+                    )
+                    changed += 1
+        return changed
 
     def content_hash_exists(self, content_hash: str) -> bool:
         rows = list(
