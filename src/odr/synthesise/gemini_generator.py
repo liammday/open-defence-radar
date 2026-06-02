@@ -33,15 +33,22 @@ class GeminiGenerator:
     ) -> str:
         if not self._api_key:
             raise RuntimeError("GOOGLE_API_KEY is not set")
+        # Key goes in a header, NOT the URL query string — so it never leaks into
+        # a URL, traceback, or log line.
         resp = self._client.post(
             f"{_BASE}/{self.model_id}:generateContent",
-            params={"key": self._api_key},
+            headers={"x-goog-api-key": self._api_key},
             json={
                 "systemInstruction": {"parts": [{"text": system}]},
                 "contents": [{"parts": [{"text": user}]}],
                 "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
             },
         )
+        if resp.status_code == 429:
+            raise RuntimeError(
+                "Gemini API rate-limited (HTTP 429) — free-tier quota. Wait ~60s, or set "
+                "ODR_GEMINI_MODEL=gemini-1.5-flash in your .env and retry."
+            )
         resp.raise_for_status()
         data: Any = resp.json()
         parts = data["candidates"][0]["content"].get("parts", [])
