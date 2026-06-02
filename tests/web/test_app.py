@@ -145,6 +145,9 @@ def test_console_page_renders_query_form_and_guardrail() -> None:
     assert 'class="inputbox"' in resp.text  # the bordered, obviously-editable input
     assert "pick an example" in resp.text  # the affordance hint
     assert 'id="loading"' in resp.text  # the in-flight progress block
+    # fonts are self-hosted: no runtime Google Fonts dependency
+    assert "/static/fonts.css" in resp.text
+    assert "fonts.googleapis.com" not in resp.text
 
 
 def test_console_shows_corpus_readout() -> None:
