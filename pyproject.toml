@@ -1,6 +1,6 @@
 [project]
 name = "open-defence-radar"
-version = "0.4.0"
+version = "0.5.0"
 description = "Grounded RAG over open defence-and-security signals, exposed as an MCP tool. Open sources only; analytic, not operational."
 readme = "README.md"
 requires-python = ">=3.12"
