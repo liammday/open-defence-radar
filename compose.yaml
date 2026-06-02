@@ -1,0 +1,27 @@
+# Run the web console in a container. Generation defaults to a local LM Studio /
+# Ollama server on the host (reachable via host.docker.internal); the ingested
+# store + eval artifacts live on a mounted ./data volume.
+#
+#   docker compose up --build      → http://localhost:8000
+#
+# Ingest + eval still run on the host (uv run odr ingest …; uv run odr eval) and
+# write into ./data, which the container reads.
+services:
+  odr-web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ODR_GENERATOR: ${ODR_GENERATOR:-lmstudio}
+      ODR_LLM_MODEL: ${ODR_LLM_MODEL:-google/gemma-4-e4b}
+      ODR_LLM_BASE_URL: ${ODR_LLM_BASE_URL:-http://host.docker.internal:1234/v1}
+    volumes:
+      - ./data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').getcode()==200 else 1)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3

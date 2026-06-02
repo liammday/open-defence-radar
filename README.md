@@ -3,7 +3,7 @@
 A grounded retrieval engine over **open** defence-and-security signals: it ingests
 public open-source data, makes it queryable through AI synthesis where **every
 claim is traceable to a cited source**, and exposes the whole thing as an MCP
-tool (plus a CLI, and a web console in a later phase).
+tool (plus a CLI and a web console).
 
 > **Open sources only.** This project uses exclusively public, openly-licensed
 > data with recorded provenance. It is **analytic, not operational** — awareness
@@ -95,6 +95,33 @@ Desktop / Claude Code). Add to your client's MCP config:
 The tool returns a cited answer, the citations (source · url · date), a
 groundedness read, and the retrieved-passage count.
 
+## Web console + trust dashboard
+
+The same grounded `query`, plus the evaluation trust dashboard, served as a small
+FastAPI app — the "Open Signals Reading Room":
+
+```bash
+uv run odr-web            # → http://localhost:8000
+```
+
+The **console** (`/`) renders a grounded brief with inline citation chips that
+expand into provenance cards; the **trust dashboard** (`/trust`) shows the eval
+metrics (hit-rate, groundedness, unsupported-claim) against their floors plus a
+live source-provenance table. `GET /healthz` is a liveness probe. Generation uses
+the same provider as the CLI/MCP (`ODR_GENERATOR`), and the fonts are self-hosted,
+so the page makes no third-party request.
+
+### In a container
+
+```bash
+docker compose up --build    # → http://localhost:8000
+```
+
+Compose mounts `./data` (the ingested store + eval artifacts) and points the
+container at a local LM Studio / Ollama on the host (`host.docker.internal`).
+Ingest + eval still run on the host (`uv run odr ingest …`, `uv run odr eval`),
+writing into `./data`, which the container reads.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -108,7 +135,10 @@ groundedness read, and the retrieved-passage count.
 | `ODR_LLM_MODEL` | `local-model` | The model id loaded in that server (e.g. `google/gemma-4-e4b`). |
 | `ODR_EMBEDDER` | `local` | `local` (offline BGE) · `fake` (tests). |
 | `ODR_DB_PATH` | `data/odr.sqlite3` | SQLite store location. |
+| `ODR_EVAL_DIR` | `data/eval` | Where the eval artifact (`latest.json`) is read/written. |
 | `ODR_RERANK` | `0` | `1` enables the cross-encoder reranker (experimental; eval-gated). |
+| `ODR_WEB_HOST` | `127.0.0.1` | `odr-web` bind host (`0.0.0.0` in the container). |
+| `ODR_WEB_PORT` | `8000` | `odr-web` bind port. |
 
 ## Development
 

@@ -7,7 +7,9 @@ routes are exercised against fakes — no live model, store, or network.
 from __future__ import annotations
 
 from datetime import date, datetime
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from odr.query import answer_to_dict
@@ -205,3 +207,20 @@ def test_trust_page_no_eval_is_graceful() -> None:
 
     assert resp.status_code == 200
     assert "No evaluation has been run" in resp.text
+
+
+def test_default_context_creates_missing_data_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # First run / container: ODR_DB_PATH points into a not-yet-created dir.
+    from odr.web.app import _default_context
+
+    db = tmp_path / "fresh" / "odr.sqlite3"
+    monkeypatch.setenv("ODR_DB_PATH", str(db))
+    monkeypatch.setenv("ODR_EVAL_DIR", str(tmp_path / "eval"))
+
+    ctx = _default_context()  # must not raise apsw.CantOpenError
+
+    assert db.parent.is_dir()
+    assert ctx.document_count == 0
+    assert ctx.trust is None
