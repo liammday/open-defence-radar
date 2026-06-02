@@ -87,6 +87,7 @@ class QueryRequest(BaseModel):
     date_from: str | None = None
     date_to: str | None = None
     sources: list[str] | None = None
+    region: str | None = None
 
 
 def create_app(
@@ -106,7 +107,7 @@ def create_app(
 
     @app.post("/query")
     def query(req: QueryRequest) -> JSONResponse:
-        filters = build_filters(req.date_from, req.date_to, req.sources)
+        filters = build_filters(req.date_from, req.date_to, req.sources, req.region)
         try:
             return JSONResponse(content=answer_to_dict(query_fn(req.topic, req.k, filters)))
         except Exception as exc:
