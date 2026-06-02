@@ -106,6 +106,34 @@ def query(
     )
 
 
+@app.command()
+def agent(
+    question: str = typer.Argument(..., help="A broad question to decompose"),
+    k: int = typer.Option(8, help="Passages to retrieve per sub-query"),
+) -> None:
+    """Decompose a broad question across multiple grounded queries into one cited brief."""
+    from odr.agent.orchestrator import decompose_and_answer
+    from odr.agent.planner import LLMPlanner
+
+    brief = decompose_and_answer(question, planner=LLMPlanner(), k=k)
+
+    typer.echo(f"Sub-questions ({len(brief.sub_questions)}):")
+    for sub in brief.sub_questions:
+        typer.echo(f"  - {sub}")
+    typer.echo("")
+    typer.echo(brief.text)
+    if brief.citations:
+        typer.echo("\nSources:")
+        for c in brief.citations:
+            published = c.published_at.isoformat() if c.published_at else None
+            bits = " · ".join(p for p in (c.source_name, published, c.document_title) if p)
+            typer.echo(f"  {c.marker} {bits} — {c.url}")
+    g = brief.groundedness
+    typer.echo(
+        f"\nGroundedness: {g.supported}/{g.total_claims} claims supported (score {g.score:.2f})"
+    )
+
+
 @app.command(name="eval")
 def evaluate() -> None:
     """Run the evaluation harness against the fixture corpus; write data/eval/latest.json."""
