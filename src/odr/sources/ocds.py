@@ -15,8 +15,24 @@ from typing import Any
 
 import httpx
 
+from odr.geo import classify
 from odr.ingest.chunk import Chunker, WholeRecordChunker
 from odr.types import Document, SourceMeta
+
+
+def delivery_region_code(raw: Mapping[str, Any]) -> str | None:
+    """The first resolvable ITL-1 delivery region in an OCDS release, or None.
+
+    Reads `tender.items[].deliveryAddresses[].region` (a region name or NUTS
+    code) and normalises it to a UK ITL-1 code. Shared by `normalise` and the
+    `odr geo backfill` maintenance command (which re-derives from stored raw).
+    """
+    for item in (raw.get("tender") or {}).get("items") or []:
+        for addr in item.get("deliveryAddresses") or []:
+            region = classify(addr.get("region"))
+            if region is not None:
+                return region.code
+    return None
 
 
 class OcdsSource:
@@ -103,6 +119,7 @@ class OcdsSource:
             content_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
             published_at=self._parse_date(raw.get("date")),
             raw=dict(raw),
+            region_code=delivery_region_code(raw),
         )
 
     def _notice_url(self, ocid: str) -> str:

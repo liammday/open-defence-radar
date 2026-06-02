@@ -22,6 +22,7 @@ class Document:
     content_hash: str  # for dedupe
     published_at: date | None = None
     raw: dict | None = None  # the original payload, kept for provenance/debug
+    region_code: str | None = None  # UK ITL-1 code (delivery region), or None
 
 
 @dataclass(frozen=True)
