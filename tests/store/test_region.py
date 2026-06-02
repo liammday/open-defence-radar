@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 import apsw
 
@@ -6,7 +7,7 @@ from odr.store.sqlite_store import SqliteStore
 from odr.types import Document, Filters
 
 
-def _doc(ref, region_code):
+def _doc(ref: str, region_code: str | None) -> Document:
     return Document(
         source_id="contracts-finder",
         source_ref=ref,
@@ -19,7 +20,7 @@ def _doc(ref, region_code):
     )
 
 
-def test_region_persisted_and_breakdown(tmp_path):
+def test_region_persisted_and_breakdown(tmp_path: Path) -> None:
     store = SqliteStore(tmp_path / "t.sqlite3")
     store.init_schema()
     store.upsert_document(_doc("a", "UKI"))
@@ -31,7 +32,7 @@ def test_region_persisted_and_breakdown(tmp_path):
     assert breakdown[None] == 1  # unspecified bucket
 
 
-def test_migration_adds_region_column_to_legacy_db(tmp_path):
+def test_migration_adds_region_column_to_legacy_db(tmp_path: Path) -> None:
     # Simulate a pre-Phase-5 DB: build the document table without region_code.
     p = tmp_path / "legacy.sqlite3"
     con = apsw.Connection(str(p))
@@ -48,7 +49,7 @@ def test_migration_adds_region_column_to_legacy_db(tmp_path):
     assert {rs.code: rs.document_count for rs in store.region_breakdown()}["UKM"] == 1
 
 
-def test_region_filter_clause():
+def test_region_filter_clause() -> None:
     clause, params = SqliteStore._filter_clause(Filters(region="UKJ"))
     assert "d.region_code = ?" in clause and params == ["UKJ"]
     # a region name is normalised to its ITL-1 code

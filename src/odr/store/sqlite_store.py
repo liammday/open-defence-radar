@@ -400,9 +400,7 @@ class SqliteStore:
         """
         from odr.geo import REGIONS
 
-        rows = self._conn.execute(
-            "SELECT region_code, COUNT(*) FROM document GROUP BY region_code"
-        )
+        rows = self._conn.execute("SELECT region_code, COUNT(*) FROM document GROUP BY region_code")
         counts = {code: int(n) for code, n in rows}
         stats = [
             RegionStat(code=r.code, name=r.name, document_count=counts.get(r.code, 0))

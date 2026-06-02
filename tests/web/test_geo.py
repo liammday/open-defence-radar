@@ -1,34 +1,34 @@
 from fastapi.testclient import TestClient
 
-from odr.types import Answer, GroundednessReport, RegionStat
+from odr.types import Answer, Filters, GroundednessReport, RegionStat
 from odr.web.app import SiteContext, create_app
 from odr.web.geo_view import build_geo_view
 
-
-def _fake_query(topic, k, filters):
-    _fake_query.seen = filters
-    return Answer(
-        text="ok", citations=(), groundedness=GroundednessReport(0, 0, 0), retrieved=()
-    )
+_seen: list[Filters | None] = []
 
 
-def test_query_route_forwards_region():
-    app = create_app(query_fn=_fake_query)
-    client = TestClient(app)
+def _fake_query(topic: str, k: int, filters: Filters | None) -> Answer:
+    _seen.append(filters)
+    return Answer(text="ok", citations=(), groundedness=GroundednessReport(0, 0, 0), retrieved=())
+
+
+def test_query_route_forwards_region() -> None:
+    _seen.clear()
+    client = TestClient(create_app(query_fn=_fake_query))
     r = client.post("/query", json={"topic": "x", "region": "South East"})
     assert r.status_code == 200
-    assert _fake_query.seen is not None and _fake_query.seen.region == "South East"
+    assert _seen[-1] is not None and _seen[-1].region == "South East"
 
 
-def test_query_route_no_filters_when_region_absent():
-    app = create_app(query_fn=_fake_query)
-    client = TestClient(app)
+def test_query_route_no_filters_when_region_absent() -> None:
+    _seen.clear()
+    client = TestClient(create_app(query_fn=_fake_query))
     r = client.post("/query", json={"topic": "x"})
     assert r.status_code == 200
-    assert _fake_query.seen is None
+    assert _seen[-1] is None
 
 
-def test_geo_view_buckets_and_unspecified():
+def test_geo_view_buckets_and_unspecified() -> None:
     stats = [
         RegionStat("UKI", "London", 7),
         RegionStat("UKJ", "South East", 1),
@@ -42,12 +42,12 @@ def test_geo_view_buckets_and_unspecified():
     assert 0 < south_east.intensity < london.intensity  # 1/7 < 7/7
 
 
-def test_geo_view_all_twelve_regions_present_even_when_empty():
+def test_geo_view_all_twelve_regions_present_even_when_empty() -> None:
     view = build_geo_view([RegionStat(None, "Region not specified", 3)])
     assert len(view.cells) == 12 and view.placed_total == 0 and view.unspecified == 3
 
 
-def test_trust_page_renders_choropleth_and_a11y_table():
+def test_trust_page_renders_choropleth_and_a11y_table() -> None:
     def ctx() -> SiteContext:
         return SiteContext(
             source_count=3,

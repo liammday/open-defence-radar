@@ -13,11 +13,13 @@ tool (plus a CLI and a web console).
 
 ## Status
 
-**Phase 4 (`v0.5.0`) — agentic decomposition.** Everything from Phases 0–3 (open
-sources, hybrid retrieval + filters, the CI-gated evaluation harness, and the web
-console + trust dashboard), now with **`odr agent`** — it plans a broad question into
-focused sub-questions, runs each through the same grounded `query`, and recombines
-them into **one cited brief**, rehearsing the FDE decomposition skill. See the
+**Phase 5 (`v0.6.0`) — safe geospatial.** Everything from Phases 0–4 (open sources,
+hybrid retrieval + filters, the CI-gated evaluation harness, the web console + trust
+dashboard, and `odr agent` decomposition), now with **region awareness**: each
+procurement notice's UK delivery region is extracted to an ITL-1 code, queries can be
+filtered by region (`odr query --region "South East"`), and the trust dashboard shows
+a self-hosted choropleth of where the open procurement activity is. **Region-level
+only — analytic, not operational** (see [Geospatial](#geospatial)). See the
 [milestones](https://github.com/liammday/open-defence-radar/milestones) and
 [releases](https://github.com/liammday/open-defence-radar/releases).
 
@@ -137,6 +139,27 @@ uv run odr agent "Which UK defence contracts and MoD announcements mention AI or
 and calling the `query` tool per sub-question — to rehearse FDE-style decomposition
 over the protocol.
 
+## Geospatial
+
+Procurement notices carry a delivery **region**; the ingester normalises it (a region
+name or NUTS code) to one of the 12 UK **ITL-1 regions** and stores it on the document.
+You can then filter retrieval by region, and the trust dashboard maps where the open
+procurement activity is:
+
+```bash
+uv run odr query "MoD AI procurement" --region "South East"   # name or ITL-1 code (UKJ)
+uv run odr geo backfill                                        # re-derive regions for an existing store
+```
+
+**This is deliberately region-level — analytic, not operational.** The source data
+contains no point finer than a region, so nothing here can resolve to a site; the
+dashboard map is a self-hosted tile-grid choropleth (no external tile server, no
+third-party asset), and notices with no stated region are shown honestly as
+"region not specified". The richer-but-riskier options (ACLED conflict-event geocoding,
+precise/postcode coordinates, "within N km of a place") were **deliberately declined** —
+they cut against the open-data-only and analytic-not-operational guardrails for a
+clearance-aware public repo.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -195,8 +218,10 @@ breaching its floor fails the build, so retrieval/grounding can't silently regre
 | UK Contracts Finder | Open Government Licence v3.0 | OCDS API |
 | Find a Tender | Open Government Licence v3.0 | OCDS API |
 | GOV.UK · MoD news | Open Government Licence v3.0 | Search API |
+| ONS UK ITL-1 region geography (names, codes, centroids) | Open Government Licence v3.0 | Static gazetteer (`odr/geo`) |
 
 Contains public sector information licensed under the Open Government Licence v3.0.
+The dashboard region map is a self-authored tile-grid schematic (no third-party map asset).
 
 ## License
 

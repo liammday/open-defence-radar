@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from odr.query import build_filters
 from odr.sources.ocds import delivery_region_code
@@ -6,16 +7,16 @@ from odr.store.sqlite_store import SqliteStore
 from odr.types import Document
 
 
-def test_build_filters_includes_region():
+def test_build_filters_includes_region() -> None:
     f = build_filters(region="South East")
     assert f is not None and f.region == "South East"
 
 
-def test_build_filters_none_when_all_empty():
+def test_build_filters_none_when_all_empty() -> None:
     assert build_filters() is None
 
 
-def test_backfill_region_codes_from_raw(tmp_path):
+def test_backfill_region_codes_from_raw(tmp_path: Path) -> None:
     store = SqliteStore(tmp_path / "b.sqlite3")
     store.init_schema()
     raw = {
