@@ -1,5 +1,7 @@
 # open-defence-radar
 
+![open-defence-radar: a grounded retrieval engine over open defence-and-security signals, every claim traceable to a cited source](docs/assets/hero.png)
+
 A grounded retrieval engine over **open** defence-and-security signals: it ingests
 public open-source data, makes it queryable through AI synthesis where **every
 claim is traceable to a cited source**, and exposes the whole thing as an MCP
@@ -10,6 +12,16 @@ tool (plus a CLI and a web console).
 > and analysis of what is publicly known, never targeting or operational content.
 > No employer-connected data. No secrets in the repo. Full guardrail checklist:
 > [`docs/process/versioning-and-release.md`](docs/process/versioning-and-release.md).
+
+## Why this exists
+
+Most retrieval demos answer fluently and leave you to trust them. This one is built the other way round:
+
+- **Grounded, or silent.** Every claim cites a fetched, licensed passage. If nothing supports an answer, it says so instead of inventing one.
+- **Measured, not asserted.** A CI-gated evaluation harness scores retrieval and groundedness on every commit; a regression past the floor fails the build.
+- **Clearance-safe by design.** Open sources only, analytic not operational, recorded provenance, no secrets. The guardrails are enforced in code, not just promised in the README.
+
+It is a deliberately small, complete artifact: a real RAG pipeline, an MCP tool, a web console + trust dashboard, agentic decomposition, and the evaluation that proves the whole thing still works.
 
 ## Status
 
@@ -112,6 +124,10 @@ metrics (hit-rate, groundedness, unsupported-claim) against their floors plus a
 live source-provenance table. `GET /healthz` is a liveness probe. Generation uses
 the same provider as the CLI/MCP (`ODR_GENERATOR`), and the fonts are self-hosted,
 so the page makes no third-party request.
+
+![The web console: a grounded answer with inline citation chips, a groundedness read, and the sources it drew from](docs/assets/console.png)
+
+![The trust dashboard: retrieval and groundedness scored against their floors, a source-provenance table, and a region-level map of open procurement activity](docs/assets/trust.png)
 
 ### In a container
 

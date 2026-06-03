@@ -28,3 +28,6 @@ htmlcov/
 
 # Local agent / preview config
 .claude/
+
+# Private working notes (launch comms, never published)
+/comms/
