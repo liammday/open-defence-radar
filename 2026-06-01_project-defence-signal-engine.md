@@ -4,7 +4,7 @@
 **Prepared:** 2026-06-01
 **Owner:** Liam Day
 **Audience:** Claude Code (build agent)
-**Purpose:** A portfolio project that builds and qualifies Applied AI / FDE skills (RAG, MCP, AI APIs, multiple data stores, evaluation) on a defence-and-AI domain, using only open data so it is safe to publish given active security clearance and current employment.
+**Purpose:** A portfolio project that builds and qualifies Applied AI / FDE skills (RAG, MCP, AI APIs, multiple data stores, evaluation) on a defence-and-AI domain, using only open data so it is safe to publish.
 
 ---
 
@@ -33,11 +33,11 @@ The single most differentiating element is the **evaluation and grounding layer*
 
 ## 2. Guardrails (non-negotiable)
 
-These exist because of active security clearance and current employment. Treat them as hard requirements, not preferences.
+Treat them as hard requirements, not preferences.
 
 1. **Open data only.** Every source must be publicly available with a clear provenance record stored alongside ingested content. No paywalled, leaked, or access-controlled data. No scraping behind logins.
 2. **Visible provenance.** Every answer cites its sources. The repo README states "open sources only" explicitly. This reinforces the clearance-aware signal rather than undercutting it.
-3. **Nothing employer-connected.** No data, code, credentials, or IP from Outdooractive or any current/former employer. No resemblance to internal systems.
+3. **Nothing employer-connected.** No data, code, credentials, or IP from any current/former employer. No resemblance to internal systems.
 4. **Analytic, not operational.** Framing is awareness and analysis (what was announced, what is public). Never targeting, ISTAR tradecraft, or anything that reads as operational planning.
 5. **No clearance specifics in public surfaces.** The public repo and any write-up use generic "security cleared" language only. Never name clearance levels, operations, or deployment locations.
 6. **Secrets stay out of the repo.** API keys via environment variables and a `.env.example`. Never commit real keys.
