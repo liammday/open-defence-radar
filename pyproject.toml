@@ -1,6 +1,6 @@
 [project]
 name = "open-defence-radar"
-version = "0.6.0"
+version = "1.0.0"
 description = "Grounded RAG over open defence-and-security signals, exposed as an MCP tool. Open sources only; analytic, not operational."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,8 +18,8 @@ dependencies = [
     "uvicorn[standard]>=0.30",
 ]
 
-# License is intentionally unset until the public-release decision (MIT vs Apache-2.0),
-# tracked for v1.0.0. See README "License".
+license = "MIT"
+license-files = ["LICENSE"]
 
 [project.scripts]
 odr = "odr.cli:main"

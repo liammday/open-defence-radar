@@ -13,14 +13,13 @@ tool (plus a CLI and a web console).
 
 ## Status
 
-**Phase 5 (`v0.6.0`) — safe geospatial.** Everything from Phases 0–4 (open sources,
-hybrid retrieval + filters, the CI-gated evaluation harness, the web console + trust
-dashboard, and `odr agent` decomposition), now with **region awareness**: each
-procurement notice's UK delivery region is extracted to an ITL-1 code, queries can be
-filtered by region (`odr query --region "South East"`), and the trust dashboard shows
-a self-hosted choropleth of where the open procurement activity is. **Region-level
-only — analytic, not operational** (see [Geospatial](#geospatial)). See the
-[milestones](https://github.com/liammday/open-defence-radar/milestones) and
+**`v1.0.0` — Definition of Done.** All six phases complete: open sources + recorded
+provenance, hybrid retrieval (semantic + keyword + rerank) with date/source/region
+filters, grounded synthesis where every claim is cited, an MCP `query` tool, a
+CI-gated evaluation harness, the web console + trust dashboard (with a region
+choropleth), `odr agent` decomposition, and region-level geospatial. Open data only;
+analytic, not operational. Runs from a clean clone (`uv sync` → tests + eval green).
+See the [milestones](https://github.com/liammday/open-defence-radar/milestones) and
 [releases](https://github.com/liammday/open-defence-radar/releases).
 
 ## How it works
@@ -225,5 +224,5 @@ The dashboard region map is a self-authored tile-grid schematic (no third-party 
 
 ## License
 
-Project licence to be decided before public release (MIT vs Apache-2.0) — tracked
-for `v1.0.0`.
+[MIT](LICENSE) © Liam Day. The ingested data remains under its own licence (Open
+Government Licence v3.0); see [Sources & licensing](#sources--licensing).
