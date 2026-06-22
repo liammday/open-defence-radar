@@ -6,6 +6,12 @@ on:
   push:
     branches: [main]
 
+# Cancel superseded runs on the same ref so a rapid push sequence doesn't
+# queue redundant CI.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 # The same four gates run locally. The eval-threshold gate is added in Phase 2.
 jobs:
   check:
