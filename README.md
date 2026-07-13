@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/liammday-open-defence-radar-badge.png)](https://mseep.ai/app/liammday-open-defence-radar)
+
 # open-defence-radar
 
 ![open-defence-radar: a grounded retrieval engine over open defence-and-security signals, every claim traceable to a cited source](docs/assets/hero.png)
