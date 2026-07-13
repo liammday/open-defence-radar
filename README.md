@@ -242,3 +242,9 @@ The dashboard region map is a self-authored tile-grid schematic (no third-party 
 
 [MIT](LICENSE) © Liam Day. The ingested data remains under its own licence (Open
 Government Licence v3.0); see [Sources & licensing](#sources--licensing).
+
+<!-- wiki-migrate:documentation-pointer -->
+## Documentation
+
+Narrative and process docs live in the [wiki](https://github.com/liammday/open-defence-radar/wiki), not in this repo tree. New runbooks, design notes, and retrospectives belong there, not in docs/, comms/, or notes/ here.
+<!-- /wiki-migrate:documentation-pointer -->
